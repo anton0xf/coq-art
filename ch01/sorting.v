@@ -59,14 +59,14 @@ Qed.
 Definition permutation (ns ms : list nat) : Prop
   := forall n : nat, nb_occ n ns = nb_occ n ms.
 
-Theorem permutation_is_refl (ns ms : list nat)
+Theorem permutation_is_sym (ns ms : list nat)
   : permutation ns ms -> permutation ms ns.
 Proof.
   unfold permutation. intros H n.
   symmetry. apply (H n).
 Qed.
 
-Theorem permutation_is_sym (ns : list nat) : permutation ns ns.
+Theorem permutation_is_refl (ns : list nat) : permutation ns ns.
 Proof. intros n. reflexivity. Qed.
 
 Theorem permutation_is_trans (ns ms ks : list nat)
@@ -172,7 +172,7 @@ Theorem insertion_sort_save_elements (ns : list nat)
   : permutation ns (insertion_sort ns).
 Proof.
   induction ns as [| n ns' IH].
-  - (*[ ns = [] ]*) simpl. apply permutation_is_sym.
+  - (*[ ns = [] ]*) simpl. apply permutation_is_refl.
   - (*[ ns = n :: ns' ]*)
     simpl. apply insert_is_permutaion, IH.
 Qed.
