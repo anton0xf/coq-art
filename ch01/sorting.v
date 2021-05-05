@@ -10,16 +10,16 @@ Inductive sorted  : list nat -> Prop
       -> sorted (n1 :: ns)
       -> sorted (n0 :: n1 :: ns).
 
+#[export] Hint Constructors sorted :  sort.
+
 Example sorted_ex : sorted [1; 3; 7].
 Proof.
-  repeat constructor; ring.
+  auto with sort arith.
 Qed.
 
 Theorem sorted_inv (n : nat) (ns : list nat) : sorted (n :: ns) -> sorted ns.
 Proof.
-  intros H. inversion H.
-  - constructor.
-  - assumption.
+  intros H. inversion H; auto with sort.
 Qed.
 
 Theorem sorted_order (n0 n1 : nat) (ns : list nat)
