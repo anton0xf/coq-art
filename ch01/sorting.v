@@ -28,10 +28,10 @@ Proof.
   intros H. inversion H. assumption.
 Qed.
 
-Fixpoint nb_occ (n : nat) (ns : list nat) : nat
+Fixpoint nb_occ (m : nat) (ns : list nat) : nat
   := match ns with
      | [] => 0
-     | m :: ns' => Nat.b2n (n =? m) + nb_occ n ns'
+     | n :: ns' => Nat.b2n (m =? n) + nb_occ m ns'
      end.
 
 Example nb_occ_ex : nb_occ 3 [1; 3; 2; 3] = 2.
