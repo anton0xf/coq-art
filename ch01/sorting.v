@@ -40,7 +40,7 @@ Proof. reflexivity. Qed.
 Theorem nb_occ_cons (n m : nat) (ns : list nat)
   : nb_occ n (m :: ns) = Nat.b2n (n =? m) + nb_occ n ns.
 Proof.
-  simpl. destruct (n =? m) eqn:eq; reflexivity.
+  simpl. case (Nat.eq_dec n m); auto.
 Qed.
 
 Theorem nb_occ_cons_same (n : nat) (ns : list nat)
@@ -62,18 +62,17 @@ Definition permutation (ns ms : list nat) : Prop
 Theorem permutation_is_sym (ns ms : list nat)
   : permutation ns ms -> permutation ms ns.
 Proof.
-  unfold permutation. intros H n.
-  symmetry. apply (H n).
+  unfold permutation. intros H n. auto.
 Qed.
 
 Theorem permutation_is_refl (ns : list nat) : permutation ns ns.
-Proof. intros n. reflexivity. Qed.
+Proof. easy. Qed.
 
 Theorem permutation_is_trans (ns ms ks : list nat)
   : permutation ns ms -> permutation ms ks -> permutation ns ks.
 Proof.
   unfold permutation. intros Hnm Hmk n.
-  rewrite (Hnm n). apply (Hmk n).
+  now rewrite Hnm.
 Qed.
 
 Theorem permutation_cons (k : nat) (ns ms : list nat)
@@ -81,16 +80,18 @@ Theorem permutation_cons (k : nat) (ns ms : list nat)
 Proof.
   unfold permutation. intros H n.
   repeat rewrite nb_occ_cons.
-  rewrite (H n). reflexivity.
+  now rewrite H.
 Qed.
 
 Theorem permutation_perm (k1 k2 : nat) (ns ms : list nat)
   : permutation ns ms -> permutation (k1 :: k2 :: ns) (k2 :: k1 :: ms).
 Proof.
   unfold permutation. intros H n.
-  repeat rewrite nb_occ_cons. rewrite (H n).
+  repeat rewrite nb_occ_cons. rewrite H.
   ring.
 Qed.
+
+#[export] Hint Resolve permutation_cons permutation_is_refl permutation_perm : sort.
 
 Fixpoint insert (m : nat) (ns : list nat)
   := match ns with
