@@ -152,6 +152,17 @@ Proof.
   reflexivity.
 Qed.
 
+(* modified theorem from book *)
+Lemma insert_permutation : forall (ns : list nat) (m : nat),
+    permutation (m :: ns) (insert m ns).
+Proof.
+  induction ns as [| n ns' IH]; simpl; auto with sort.
+  intros m.
+  destruct (m <=? n) eqn:neq;
+    try apply permutation_is_trans with (n :: m :: ns');
+    auto with sort.
+Qed.
+
 Fixpoint insertion_sort (ns : list nat)
   := match ns with
      | [] => []
