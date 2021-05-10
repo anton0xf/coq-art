@@ -310,6 +310,44 @@ Inductive btree : Type
 (** you may use the concatenation function app on lists
   (also written l1 ++ l2 ) *)
 
+Fixpoint list_btns (t : btree) : list nat
+  := match t with
+     | leaf => []
+     | bnode n t1 t2 => list_btns t1 ++ (n :: list_btns t2)
+     end.
+
+Example btree_ex
+  := let t3 := bnode 3 (bnode 4 leaf leaf) leaf
+     in let t5 := bnode 5 leaf (bnode 6 leaf leaf)
+     in let t2 := bnode 2 t3 t5
+     in bnode 1 leaf t2.
+Example list_btns_ex : list_btns btree_ex = [1; 4; 3; 2; 5; 6].
+Proof. unfold btree_ex. reflexivity. Qed.
 
 (* write a boolean function that checks whether a tree is a binary
 search tree *)
+Fixpoint is_bst (t : btree) : bool
+  := match t with
+     | leaf => true
+     | bnode n t1 t2 => is_bst t1 && is_bst t2
+                        && match t1 with
+                           | leaf => true
+                           | bnode n1 _ _ => n1 <? n
+                           end
+                        && match t2 with
+                           | leaf => true
+                           | bnode n2 _ _ => n <? n2
+                           end
+     end.
+
+Example is_bst_ex1: is_bst btree_ex = false.
+Proof. unfold btree_ex. reflexivity. Qed.
+
+Example bst_ex
+  := let t6 := bnode 6 (bnode 4 leaf leaf) (bnode 7 leaf leaf)
+     in let t3 := bnode 3 (bnode 1 leaf leaf) t6
+     in let t10 := bnode 10 leaf (bnode 14 (bnode 13 leaf leaf) leaf)
+     in bnode 8 t3 t10.
+
+Example is_bst_ex2: is_bst bst_ex = true.
+Proof. unfold bst_ex. reflexivity. Qed.
