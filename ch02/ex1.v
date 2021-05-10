@@ -209,25 +209,16 @@ Qed.
 Example salt_ex3 : salt 2 3 = 5.
 Proof. reflexivity. Qed.
 
-Fixpoint salt2_aux (x n m acc : nat) : nat
+Fixpoint salt2_aux (x m acc : nat) (p : bool) : nat
   := match m with
-     | O => if Nat.even n then acc + 1 else acc - 1
+     | O => if p then acc + 1 else acc - 1
      | S m' => let s := x^m in
-               let acc' := if Nat.even (n - m)
-                           then (acc + s) else (acc - s)
-               in salt2_aux x n m' acc'
+               let acc' := if p then (acc + s) else (acc - s)
+               in salt2_aux x m' acc' (negb p)
      end.
 
 Definition salt2 (x n : nat) : nat
-  := let aux (m acc : nat) : nat
-         := match m with
-            | O => if Nat.even n then acc + 1 else acc - 1
-            | S m' => let s := x^m in
-                      let acc' := if Nat.even (n - m)
-                                  then (acc + s) else (acc - s)
-                      in salt2_aux x n m' acc'
-            end
-     in aux n 0.
+  := salt2_aux x n 0 true.
 
 Example salt2_ex1 (x : nat) : salt2 x 3 = x^3 - x^2 + x - 1.
 Proof.
@@ -242,11 +233,78 @@ Qed.
 Example salt2_ex3 : salt2 2 3 = 5.
 Proof. reflexivity. Qed.
 
+Definition salt_eq (x n : nat) := salt x n = salt2 x n.
+Definition salt2_aux_eq (x m : nat)
+  := forall acc : nat,
+    salt2_aux x m acc true = acc + salt2_aux x m 0 true.
+
+Lemma salt2_aux_acc_lem (x m : nat)
+  : 0 < x
+    -> (forall m' : nat, m' < m -> salt2_aux_eq x m')
+    -> salt2_aux_eq x m.
+Proof.
+  intros xneq IH.
+  destruct m as [| m0]; unfold salt2_aux_eq; try reflexivity.
+  intro acc. simpl.
+  destruct m0 as [| m1].
+  - simpl. repeat rewrite Nat.mul_1_r.
+    rewrite Nat.add_sub_assoc; try reflexivity.
+    apply lt_le_S. assumption.
+  - simpl. rewrite IH; try auto with arith.
+    symmetry. rewrite IH; try auto with arith.
+    rewrite Nat.add_assoc, Nat.add_sub_assoc; try reflexivity.
+    apply Nat.mul_le_mono_l. rewrite <- Nat.mul_1_l at 1.
+    apply Nat.mul_le_mono_r. apply lt_le_S. assumption.
+Qed.
+
+Lemma salt2_aux_acc (x m : nat) : 0 < x -> salt2_aux_eq x m.
+Proof.
+  intro xneq. apply (lt_wf_ind m (salt2_aux_eq x)).
+  intros m' H. apply salt2_aux_acc_lem; assumption.
+Qed.
+
+Lemma salt2_SS (x n : nat)
+  : 0 < x -> salt2 x (S (S n)) = x^(S (S n)) - x^(S n) + salt2 x n.
+Proof.
+  intro xneq. unfold salt2. simpl.
+  rewrite salt2_aux_acc; try assumption.
+  reflexivity.
+Qed.
+
+Lemma salt_eq_lem (x n : nat)
+  : (forall m, m < n -> salt_eq x m) -> salt_eq x n.
+Proof.
+  intro IH.
+  destruct n as [| n0]; try reflexivity.
+  destruct n0 as [| n1].
+  - unfold salt_eq, salt2. simpl. auto with arith.
+  - unfold salt_eq.
+    pose (zerop x) as Hx. destruct Hx as [eq | neq].
+    + (* x = 0 *) subst x. unfold salt2. simpl.
+      apply IH. auto with arith.
+    + (* 0 < x *)
+      replace (salt x (S (S n1)))
+        with (x^(S (S n1)) - x^(S n1) + salt x n1);
+        try reflexivity.
+      replace (salt2 x (S (S n1)))
+        with (x^(S (S n1)) - x^(S n1) + salt2 x n1).
+      * rewrite Nat.add_cancel_l. apply IH.
+        auto with arith.
+      * unfold salt2. simpl.
+        symmetry. rewrite salt2_aux_acc; try assumption.
+        reflexivity.
+Qed.
+
+Theorem salt_is_salt2 (x n : nat) : salt_eq x n.
+Proof.
+  apply (lt_wf_ind n (salt_eq x)).
+  apply (salt_eq_lem x).
+Qed.
+
 (* 10/  Consider the following definition *)
 
-Inductive btree : Type :=
-|  leaf
-|  bnode (n:nat)(t1 t2: btree).
+Inductive btree : Type
+  := leaf | bnode (n : nat) (t1 t2 : btree).
 
 (* write a function that list the labels of a tree by infix order *)
 (** you may use the concatenation function app on lists
