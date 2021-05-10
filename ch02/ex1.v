@@ -170,6 +170,77 @@ Qed.
    salt 2 3 = 5
 
    You may have to define auxiliary functions. *)
+Fixpoint salt0 (x n : nat) : nat
+  := match n with
+     | O => 1
+     | S n' => x^n - (salt0 x n')
+     end.
+Example salt0_is_wrong_ex : salt0 0 2 <> 1.
+Proof. simpl. apply O_S. Qed.
+
+Fixpoint salt (x n : nat) : nat
+  := match n with
+     | O => 1
+     | 1 => x - 1
+     | S (S n') => x^n - x^(S n') + (salt x n')
+     end.
+
+Example salt_ex1 (x : nat) : salt x 3 = x^3 - x^2 + x - 1.
+Proof.
+  cbv beta delta [salt] iota.
+  pose (gt_0_eq x) as H.
+  destruct H as [neq | eq]; try ( subst x; reflexivity ).
+  apply gt_le_S in neq.
+  rewrite Nat.add_sub_assoc; try assumption.
+  reflexivity.
+Qed.
+
+Example salt_ex2 (x : nat) : salt x 4 = x^4 - x^3 + x^2 - x + 1.
+Proof.
+  cbv beta delta [salt] iota.
+  pose (gt_0_eq x) as H.
+  destruct H as [neq | eq]; try ( subst x; reflexivity ).
+  rewrite Nat.add_assoc. rewrite Nat.pow_1_r.
+  rewrite Nat.add_sub_assoc; try reflexivity.
+  rewrite Nat.pow_2_r. rewrite <- Nat.mul_1_l at 1.
+  apply Nat.mul_le_mono_r. apply gt_le_S. assumption.
+Qed.
+
+Example salt_ex3 : salt 2 3 = 5.
+Proof. reflexivity. Qed.
+
+Fixpoint salt2_aux (x n m acc : nat) : nat
+  := match m with
+     | O => if Nat.even n then acc + 1 else acc - 1
+     | S m' => let s := x^m in
+               let acc' := if Nat.even (n - m)
+                           then (acc + s) else (acc - s)
+               in salt2_aux x n m' acc'
+     end.
+
+Definition salt2 (x n : nat) : nat
+  := let aux (m acc : nat) : nat
+         := match m with
+            | O => if Nat.even n then acc + 1 else acc - 1
+            | S m' => let s := x^m in
+                      let acc' := if Nat.even (n - m)
+                                  then (acc + s) else (acc - s)
+                      in salt2_aux x n m' acc'
+            end
+     in aux n 0.
+
+Example salt2_ex1 (x : nat) : salt2 x 3 = x^3 - x^2 + x - 1.
+Proof.
+  unfold salt2. simpl. rewrite Nat.mul_1_r. reflexivity.
+Qed.
+
+Example salt2_ex2 (x : nat) : salt2 x 4 = x^4 - x^3 + x^2 - x + 1.
+Proof.
+  unfold salt2. simpl. rewrite Nat.mul_1_r. reflexivity.
+Qed.
+
+Example salt2_ex3 : salt2 2 3 = 5.
+Proof. reflexivity. Qed.
 
 (* 10/  Consider the following definition *)
 
