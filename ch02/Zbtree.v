@@ -1,7 +1,7 @@
 Require Import Bool ZArith.
 
 Inductive Zbtree : Type
-  := leaf 
+  := leaf
    | bnode (r : Z) (t1 t2 : Zbtree).
 
 Definition is_leaf (t : Zbtree) : bool
@@ -19,13 +19,13 @@ Fixpoint size (t : Zbtree) : nat
 Require Export Max.
 
 Fixpoint height (t : Zbtree) : nat
-  := match t with 
+  := match t with
      | leaf => 0
      | bnode _ t1 t2 => 1 + max (height t1) (height t2)
      end.
 
 Fixpoint mirror (t : Zbtree) : Zbtree
-  := match t with 
+  := match t with
      | leaf => leaf
      | bnode r t1 t2 => bnode r (mirror t2) (mirror t1)
      end.
@@ -51,7 +51,7 @@ Fixpoint infix_list (t : Zbtree) : list Z
      end.
 
 (**
-m is strictly greater than every node of t 
+m is strictly greater than every node of t
 *)
 
 Fixpoint strict_majorant (m : Z) (t : Zbtree) : bool
@@ -63,7 +63,7 @@ Fixpoint strict_majorant (m : Z) (t : Zbtree) : bool
      end.
 
 (**
-m is strictly less than every node of t 
+m is strictly less than every node of t
 *)
 Fixpoint strict_minorant (m : Z) (t : Zbtree) : bool
   := match t with
@@ -79,11 +79,11 @@ Fixpoint is_searchtree (t : Zbtree) : bool
      | bnode n t1 t2 => strict_minorant n t2
                         && strict_majorant n t1
                         && is_searchtree t1
-                        && is_searchtree t2 
+                        && is_searchtree t2
 end.
 
 Fixpoint memb_in_searchtree (n : Z) (t : Zbtree) : bool
-  := match t with 
+  := match t with
      | leaf => false
      | bnode r t1 t2 => match Z.compare n r with
                         | Lt => memb_in_searchtree n t1
@@ -197,7 +197,7 @@ Fixpoint insert_in_searchtree (n : Z) (t : Zbtree) : Zbtree
                         | Eq => t
                         | Gt => bnode r t1 (insert_in_searchtree n t2)
                         end
-     end. 
+     end.
 
 Definition list_to_searchtree l := List.fold_right insert_in_searchtree leaf l.
 
@@ -207,15 +207,15 @@ Compute weak_sort (4::6::9::3::8::nil)%Z.
 
 Definition list_to_searchtree_test l : bool := is_searchtree (list_to_searchtree l).
 
-Compute is_searchtree 
-        (bnode  8 
-                (bnode 5 (bnode 3 leaf leaf)
-                       (bnode 7 leaf leaf))
-                (bnode 15 (bnode 10 leaf leaf)
-                       (bnode 18 leaf leaf)))%Z.
+Compute is_searchtree
+        (bnode 8
+               (bnode 5 (bnode 3 leaf leaf)
+                      (bnode 7 leaf leaf))
+               (bnode 15 (bnode 10 leaf leaf)
+                      (bnode 18 leaf leaf)))%Z.
 
-Compute is_searchtree 
-        (bnode  8 
+Compute is_searchtree
+        (bnode  8
                 (bnode 5 (bnode 3 leaf leaf)
                        (bnode 7 leaf leaf))
                 (bnode 15 (bnode 16 leaf leaf)
