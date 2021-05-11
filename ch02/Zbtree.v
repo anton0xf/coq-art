@@ -10,7 +10,6 @@ Definition is_leaf (t : Zbtree) : bool
      | _ => false
      end.
 
-
 Fixpoint size (t : Zbtree) : nat
   := match t with
      | leaf => 1
@@ -22,7 +21,7 @@ Require Export Max.
 Fixpoint height (t : Zbtree) : nat
   := match t with 
      | leaf => 0
-     | bnode _ t1 t2 => 1 + max (height t1 ) (height t2)
+     | bnode _ t1 t2 => 1 + max (height t1) (height t2)
      end.
 
 Fixpoint mirror (t : Zbtree) : Zbtree
@@ -31,11 +30,11 @@ Fixpoint mirror (t : Zbtree) : Zbtree
      | bnode r t1 t2 => bnode r (mirror t2) (mirror t1)
      end.
 
-(** to move elsewhere
-
-Definition height' (t: Zbtree) : nat
+Definition height' (t : Zbtree) : nat
   := Zbtree_rec _  0 (fun _ t1 ht1 t2 ht2 => 1 + max ht1 ht2) t.
-*)
+
+Theorem height'_correct (t : Zbtree) : height t = height' t.
+Proof. reflexivity. Qed.
 
 Fixpoint memb (n : Z) (t : Zbtree) : bool
   := match t with
