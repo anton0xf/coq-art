@@ -199,6 +199,83 @@ Fixpoint insert_in_searchtree (n : Z) (t : Zbtree) : Zbtree
                         end
      end.
 
+Theorem insert_in_st_save_majority (r n : Z) (t : Zbtree)
+  : n < r -> strict_majorant r t = true
+    -> strict_majorant r (insert_in_searchtree n t) = true.
+Proof.
+  intros neq_nr H. induction t as [| m t1 IH1 t2 IH2].
+  - simpl. repeat rewrite andb_true_r. apply Z.ltb_lt. assumption.
+  - simpl in H.
+    apply andb_prop in H as [H H2].
+    apply andb_prop in H as [neq_mr H1].
+    apply Z.ltb_lt in neq_mr. simpl.
+    destruct (n ?= m) eqn:neq_nm; simpl;
+      repeat (apply andb_true_intro; split);
+      try apply Z.ltb_lt; try assumption.
+    + apply IH1, H1.
+    + apply IH2, H2.
+Qed.
+
+Theorem insert_in_st_save_minority (r n : Z) (t : Zbtree)
+  : r < n -> strict_minorant r t = true
+    -> strict_minorant r (insert_in_searchtree n t) = true.
+Proof.
+  intros neq_nr H. induction t as [| m t1 IH1 t2 IH2].
+  - simpl. repeat rewrite andb_true_r. apply Z.ltb_lt. assumption.
+  - simpl in H.
+    apply andb_prop in H as [H H2].
+    apply andb_prop in H as [neq_mr H1].
+    apply Z.ltb_lt in neq_mr. simpl.
+    destruct (n ?= m) eqn:neq_nm; simpl;
+      repeat (apply andb_true_intro; split);
+      try apply Z.ltb_lt; try assumption.
+    + apply IH1, H1.
+    + apply IH2, H2.
+Qed.
+
+Theorem insert_in_st_is_st (n : Z) (t : Zbtree)
+  : is_searchtree t = true
+    -> is_searchtree (insert_in_searchtree n t) = true.
+Proof.
+  induction t as [| r t1 IH1 t2 IH2]; intro H; try reflexivity.
+  simpl. assert (H0 := H). simpl in H.
+  apply andb_prop in H as [H Hs2].
+  apply andb_prop in H as [H Hs1].
+  apply andb_prop in H as [Hsm2 Hsm1].
+  destruct (n ?= r) eqn:cmp.
+  - assumption.
+  - rewrite Z.compare_lt_iff in cmp.
+    apply IH1 in Hs1. simpl.
+    repeat (apply andb_true_intro; split); try assumption.
+    apply insert_in_st_save_majority; assumption.
+  - rewrite Z.compare_gt_iff in cmp.
+    apply IH2 in Hs2. simpl.
+    repeat (apply andb_true_intro; split); try assumption.
+    apply insert_in_st_save_minority; assumption.
+Qed.
+
+Theorem insert_in_st_memb (n : Z) (t : Zbtree)
+  : memb n (insert_in_searchtree n t) = true.
+Proof.
+  induction t as [| r t1 IH1 t2 IH2]; simpl.
+  - now rewrite Z.eqb_refl.
+  - destruct (n ?= r) eqn:neq; simpl.
+    + rewrite Z.compare_eq_iff in neq.
+      subst n. now rewrite Z.eqb_refl.
+    + rewrite IH1. rewrite orb_true_r, orb_true_l. reflexivity.
+    + rewrite IH2. repeat rewrite orb_true_r. reflexivity.
+Qed.
+
+Theorem insert_in_st_correct (n : Z) (t : Zbtree)
+  : is_searchtree t = true
+    -> let t' := insert_in_searchtree n t in
+       is_searchtree t' = true /\ memb n t' = true.
+Proof.
+  intros H t'. split.
+  - apply insert_in_st_is_st. assumption.
+  - apply insert_in_st_memb.
+Qed.
+
 Definition list_to_searchtree l := List.fold_right insert_in_searchtree leaf l.
 
 Definition weak_sort l := infix_list (list_to_searchtree l).
