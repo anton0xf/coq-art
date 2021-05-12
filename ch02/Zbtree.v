@@ -82,6 +82,23 @@ Fixpoint is_searchtree (t : Zbtree) : bool
                         && is_searchtree t2
 end.
 
+Theorem right_is_search_tree (r : Z) (t1 t2 : Zbtree)
+  : is_searchtree (bnode r t1 t2) = true -> is_searchtree t2 = true.
+Proof.
+  intro H. simpl in H.
+  apply andb_prop in H as [H H2].
+  assumption.
+Qed.
+
+Theorem left_is_search_tree (r : Z) (t1 t2 : Zbtree)
+  : is_searchtree (bnode r t1 t2) = true -> is_searchtree t1 = true.
+Proof.
+  intro H. simpl in H.
+  apply andb_prop in H as [H H2].
+  apply andb_prop in H as [H H1].
+  assumption.
+Qed.
+
 Fixpoint memb_in_searchtree (n : Z) (t : Zbtree) : bool
   := match t with
      | leaf => false
@@ -270,9 +287,44 @@ Qed.
 Definition eqt (s t : Zbtree) : Prop
   := forall n : Z, memb n s = true <-> memb n t = true.
 
-Theorem insert_in_st_memb2 (n : Z) (t : Zbtree) : eqt t (insert_in_searchtree n t).
+Require Import Lia.
+Theorem insert_in_st_memb1 (n m : Z) (t : Zbtree)
+  : is_searchtree t = true -> memb m t = true
+    -> memb m (insert_in_searchtree n t) = true.
 Proof.
-Admitted.
+  induction t as [| r t1 IH1 t2 IH2]; intros Hs Hm.
+  - inversion Hm.
+  - pose (left_is_search_tree r t1 t2 Hs) as Hs1.
+    pose (right_is_search_tree r t1 t2 Hs) as Hs2.
+    simpl in Hm. simpl.
+    repeat apply orb_prop in Hm as [Hm | Hm];
+      destruct (n ?= r) eqn:neq_nr; simpl;
+      try apply Z.eqb_eq in H;
+      try apply Z.compare_eq_iff in neq_nr;
+      try rewrite Z.compare_lt_iff in neq_nr;
+      try rewrite Z.compare_gt_iff in neq_nr;
+      try rewrite Hm; try lia.
+    + rewrite (IH1 Hs1 Hm). lia.
+    + rewrite (IH2 Hs2 Hm). lia.
+Qed.
+
+Theorem insert_in_st_memb2 (n m : Z) (t : Zbtree)
+  : memb m (insert_in_searchtree n t) = true -> n = m \/ memb m t = true.
+Proof.
+  induction t as [|r t1 IH1 t2 IH2]; intro H;
+    case (Z.eq_dec n m); intro Hnm; try firstorder.
+  - simpl in H. lia.
+  - right. simpl in H. simpl.
+    destruct (n ?= r) eqn:Hnr;
+      try apply Z.compare_eq_iff in Hnr;
+      try rewrite Z.compare_lt_iff in Hnr;
+      try rewrite Z.compare_gt_iff in Hnr;
+      try assumption; simpl in H;
+        repeat apply orb_prop in H as [H | H];
+        try rewrite H; try lia.
+    + apply IH1 in H as [H | H]; try rewrite H; try lia.
+    + apply IH2 in H as [H | H]; try rewrite H; try lia.
+Qed.
 
 Theorem insert_in_st_correct (n : Z) (t : Zbtree)
   : is_searchtree t = true
@@ -288,7 +340,10 @@ Definition list_to_searchtree l := List.fold_right insert_in_searchtree leaf l.
 
 Theorem list_to_st_is_st (ns : list Z)
   : is_searchtree (list_to_searchtree ns) = true.
-Admitted.
+Proof.
+  induction ns as [| n ns' IH]; try reflexivity.
+  simpl. apply insert_in_st_is_st, IH.
+Qed.
 
 Fixpoint meml (m : Z) (ns : list Z) : bool
   := match ns with
@@ -296,9 +351,25 @@ Fixpoint meml (m : Z) (ns : list Z) : bool
      | cons n ns' => (n =? m) || meml m ns'
      end.
 
-Theorem list_to_st_save_elements (ns : list Z) (n : Z)
-  : meml n ns = true <-> memb n (list_to_searchtree ns) = true.
-Admitted.
+Theorem list_to_st_save_elements (ns : list Z) (m : Z)
+  : meml m ns = true <-> memb m (list_to_searchtree ns) = true.
+Proof.
+  split; intro H.
+  - (* -> *) induction ns as [| n ns' IH].
+    + inversion H.
+    + simpl. remember (list_to_searchtree ns') as t eqn:eqt.
+      simpl in H. apply orb_prop in H as [H | H].
+      * apply Z.eqb_eq in H. subst m. apply insert_in_st_memb.
+      * { apply insert_in_st_memb1.
+          - rewrite eqt. apply list_to_st_is_st.
+          - apply IH, H.
+        }
+  - (* <- *) induction ns as [| n ns' IH].
+    + simpl in H. discriminate H.
+    + simpl. apply orb_true_intro. simpl in H.
+      apply insert_in_st_memb2 in H as [H | H]; try lia.
+      right. apply (IH H).
+Qed.
 
 Definition weak_sort l := infix_list (list_to_searchtree l).
 
@@ -329,15 +400,214 @@ Inductive sorted : list Z -> Prop
   | sorted0 : sorted []
   | sorted1 (n : Z) : sorted [n]
   | sorted_n (n0 n1 : Z) (ns : list Z) :
-      n0 <= n1
+      n0 < n1
       -> sorted (n1 :: ns)
       -> sorted (n0 :: n1 :: ns).
 
 #[export] Hint Constructors sorted : sort.
 
+Fixpoint list_majorant (k : Z) (ns : list Z) : bool
+  := match ns with
+     | [] => true
+     | n :: ns' => (n <? k) && list_majorant k ns'
+     end.
+
+Fixpoint list_minorant (k : Z) (ns : list Z) : bool
+  := match ns with
+     | [] => true
+     | n :: ns' => (k <? n) && list_minorant k ns'
+     end.
+
+Theorem list_majorant_cons_inv (k n : Z) (ns : list Z)
+  : list_majorant k (n :: ns) = true -> list_majorant k ns = true.
+Proof.
+  intro H. simpl in H. apply andb_prop in H as [neq H].
+  assumption.
+Qed.
+
+Theorem list_majorant_gt_head (k n : Z) (ns : list Z)
+  : list_majorant k (n :: ns) = true -> n < k.
+Proof.
+  simpl. intro H. apply andb_prop in H as [H _].
+  apply Z.ltb_lt. assumption.
+Qed.
+
+Theorem list_minorant_lt_head (k n : Z) (ns : list Z)
+  : list_minorant k (n :: ns) = true -> k < n.
+Proof.
+  simpl. intro H. apply andb_prop in H as [H _].
+  apply Z.ltb_lt. assumption.
+Qed.
+
+Theorem list_minorant_cons_inv (k n : Z) (ns : list Z)
+  : list_minorant k (n :: ns) = true -> list_minorant k ns = true.
+Proof.
+  intro H. simpl in H. apply andb_prop in H as [neq H].
+  assumption.
+Qed.
+
+Theorem list_majorant_cons (k n : Z) (ns : list Z)
+  : n < k -> list_majorant k ns = true -> list_majorant k (n :: ns) = true.
+Proof.
+  intros neq H. simpl. apply andb_true_intro.
+  rewrite Z.ltb_lt. easy.
+Qed.
+
+Theorem list_majorant_app (k : Z) (ns ms : list Z)
+  : list_majorant k ns = true
+    -> list_majorant k ms = true
+    -> list_majorant k (ns ++ ms) = true.
+Proof.
+  induction ns as [| n ns' IH]; intros Hn Hm; try auto.
+  rewrite <- app_comm_cons.
+  pose (list_majorant_gt_head _ _ _ Hn) as neq.
+  pose (list_majorant_cons_inv _ _ _ Hn) as Hn'.
+  apply list_majorant_cons; try assumption.
+  apply IH; assumption.
+Qed.
+
+Theorem list_minorant_cons (k n : Z) (ns : list Z)
+  : k < n -> list_minorant k ns = true -> list_minorant k (n :: ns) = true.
+Proof.
+  intros neq H. simpl. apply andb_true_intro.
+  rewrite Z.ltb_lt. easy.
+Qed.
+
+Theorem list_minorant_app (k : Z) (ns ms : list Z)
+  : list_minorant k ns = true
+    -> list_minorant k ms = true
+    -> list_minorant k (ns ++ ms) = true.
+Proof.
+  induction ns as [| n ns' IH]; intros Hn Hm; try auto.
+  rewrite <- app_comm_cons.
+  pose (list_minorant_lt_head _ _ _ Hn) as neq.
+  pose (list_minorant_cons_inv _ _ _ Hn) as Hn'.
+  apply list_minorant_cons; try assumption.
+  apply IH; assumption.
+Qed.
+
+Theorem list_minorant_lt_majorant (m0 m1 : Z) (ns : list Z)
+  : ns <> []
+    -> list_minorant m0 ns = true
+    -> list_majorant m1 ns = true
+    -> m0 < m1.
+Proof.
+  destruct ns as [| n ns]; intros H H0 H1; try easy.
+  apply list_minorant_lt_head in H0.
+  apply list_majorant_gt_head in H1.
+  apply (Z.lt_trans m0 n m1); assumption.
+Qed.
+
+Theorem list_minorant_closure (m k : Z) (ns : list Z)
+  : m < k -> list_minorant k ns = true -> list_minorant m ns = true.
+Proof.
+  induction ns as [| n ns' IH]; intros neq_mk H; try reflexivity.
+  simpl. apply andb_true_intro.
+  simpl in H. apply andb_prop in H as [neq_mn H].
+  apply Z.ltb_lt in neq_mn. split.
+  - apply Z.ltb_lt. apply (Z.lt_trans m k n); assumption.
+  - apply IH; assumption.
+Qed.
+
+Theorem infix_list_majorant (k : Z) (t : Zbtree)
+  : strict_majorant k t = true -> list_majorant k (infix_list t) = true.
+Proof.
+  induction t as [| r t1 IH1 t2 IH2]; intro H; try reflexivity.
+  simpl. simpl in H.
+  apply andb_prop in H as [H H2].
+  apply andb_prop in H as [neq_rk H1].
+  apply Z.ltb_lt in neq_rk.
+  apply list_majorant_app.
+  - apply IH1, H1.
+  - apply list_majorant_cons; try assumption.
+    apply IH2, H2.
+Qed.
+
+Theorem infix_list_minorant (k : Z) (t : Zbtree)
+  : strict_minorant k t = true -> list_minorant k (infix_list t) = true.
+Proof.
+  induction t as [| r t1 IH1 t2 IH2]; intro H; try reflexivity.
+  simpl. simpl in H.
+  apply andb_prop in H as [H H2].
+  apply andb_prop in H as [neq_rk H1].
+  apply Z.ltb_lt in neq_rk.
+  apply list_minorant_app.
+  - apply IH1, H1.
+  - apply list_minorant_cons; try assumption.
+    apply IH2, H2.
+Qed.
+
+Theorem cons_sorted (k : Z) (ns : list Z)
+  : sorted ns -> (list_minorant k ns) = true -> sorted (k :: ns).
+Proof.
+  destruct ns as [| n ns']; intros Hs Hm; try auto with sort.
+  constructor; try assumption.
+  apply list_minorant_lt_head in Hm. assumption.
+Qed.
+
+Theorem cons_sorted_inv (n : Z) (ns : list Z)
+  : sorted (n :: ns) -> sorted ns.
+Proof.
+  intro H. destruct ns as [| n1 ns1 IH]; try constructor.
+  inversion H. assumption.
+Qed.
+
+Theorem sorted_rm_snd (n0 n1 : Z) (ns : list Z)
+  : sorted (n0 :: n1 :: ns) -> sorted (n0 :: ns).
+Proof.
+  intro H.
+  destruct ns as [| n2 ns2];
+    constructor; inversion H; inversion H4;
+      auto with zarith.
+Qed.
+
+Theorem sorted_head_is_minorant (n : Z) (ns : list Z)
+  : sorted (n :: ns) -> list_minorant n ns = true.
+Proof.
+  induction ns as [| n0 ns0 IH]; intro Hs; try reflexivity.
+  simpl. apply andb_true_intro. split.
+  - inversion Hs. apply Z.ltb_lt. assumption.
+  - apply IH. apply (sorted_rm_snd n n0 ns0 Hs).
+Qed.
+
+Theorem join_sorted (k : Z) (ns ms : list Z)
+  : sorted ns -> sorted ms
+    -> (list_majorant k ns) = true
+    -> (list_minorant k ms) = true
+    -> sorted (ns ++ k :: ms).
+Proof.
+  induction ns as [| n0 ns0 IH]; intros Hsn Hsm Hmn Hmm; simpl.
+  - apply cons_sorted; assumption.
+  - case (list_eq_dec Z.eq_dec ns0 []); intro H0.
+    + subst ns0. simpl. apply cons_sorted.
+      * simpl in IH. apply IH; try auto with sort.
+      * apply list_majorant_gt_head in Hmn.
+        apply (list_minorant_cons n0 k ms Hmn).
+        apply (list_minorant_closure n0 k ms Hmn Hmm).
+    + apply cons_sorted.
+      * apply cons_sorted_inv in Hsn.
+        apply list_majorant_cons_inv in Hmn.
+        apply IH; assumption.
+      * apply sorted_head_is_minorant in Hsn.
+        apply list_minorant_app; try assumption.
+        apply list_majorant_cons_inv in Hmn.
+        pose (list_minorant_lt_majorant n0 k ns0 H0 Hsn Hmn) as Hnk.
+        apply list_minorant_cons; try assumption.
+        apply (list_minorant_closure n0 k ms) in Hmm; assumption.
+Qed.
+
 Theorem infix_list_sorted (t : Zbtree) : is_searchtree t = true -> sorted (infix_list t).
 Proof.
-Admitted.
+  induction t as [| r t1 IH1 t2 IH2]; intro H; try auto with sort.
+  simpl. simpl in H.
+  apply andb_prop in H as [H Hs2].
+  apply andb_prop in H as [H Hs1].
+  apply andb_prop in H as [Hsm2 Hsm1].
+  apply IH1 in Hs1. apply IH2 in Hs2.
+  apply infix_list_majorant in Hsm1.
+  apply infix_list_minorant in Hsm2.
+  apply join_sorted; assumption.
+Qed.
 
 (* weak list equality : ns and ms contains same elements in any order and counts *)
 Definition weql (ns ms : list Z) : Prop
