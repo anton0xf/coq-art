@@ -326,17 +326,47 @@ Proof. unfold btree_ex. reflexivity. Qed.
 
 (* write a boolean function that checks whether a tree is a binary
 search tree *)
+Fixpoint rightmost (t : btree) : option nat
+  := match t with
+     | leaf => None
+     | bnode n _ leaf => Some n
+     | bnode n _ t2 => rightmost t2
+     end.
+
+Lemma rightmost_is_none_on_leaf_only (t : btree)
+  : rightmost t = None <-> t = leaf.
+Proof.
+  induction t as [| n t1 _ t2 IH]; try easy.
+  simpl. destruct t2 as [| n2 t21 t22]; try easy.
+  rewrite IH. easy.
+Qed.
+
+Fixpoint leftmost (t : btree) : option nat
+  := match t with
+     | leaf => None
+     | bnode n leaf _ => Some n
+     | bnode n t1 _ => leftmost t1
+     end.
+
+Lemma leftmost_is_none_on_leaf_only (t : btree)
+  : leftmost t = None <-> t = leaf.
+Proof.
+  induction t as [| n t1 IH t2 _]; try easy.
+  simpl. destruct t1 as [| n1 t11 t12]; try easy.
+  rewrite IH. easy.
+Qed.
+
 Fixpoint is_bst (t : btree) : bool
   := match t with
      | leaf => true
      | bnode n t1 t2 => is_bst t1 && is_bst t2
-                        && match t1 with
-                           | leaf => true
-                           | bnode n1 _ _ => n1 <? n
+                        && match rightmost t1 with
+                           | None => true
+                           | Some n1 => n1 <? n
                            end
-                        && match t2 with
-                           | leaf => true
-                           | bnode n2 _ _ => n <? n2
+                        && match leftmost t2 with
+                           | None => true
+                           | Some n2 => n <? n2
                            end
      end.
 
@@ -350,4 +380,13 @@ Example bst_ex
      in bnode 8 t3 t10.
 
 Example is_bst_ex2: is_bst bst_ex = true.
+Proof. unfold bst_ex. reflexivity. Qed.
+
+Example nbst_ex
+  := let t6 := bnode 6 (bnode 4 leaf leaf) (bnode 9 leaf leaf)
+     in let t3 := bnode 3 (bnode 1 leaf leaf) t6
+     in let t10 := bnode 10 leaf (bnode 14 (bnode 13 leaf leaf) leaf)
+     in bnode 8 t3 t10.
+
+Example is_bst_ex3: is_bst nbst_ex = false.
 Proof. unfold bst_ex. reflexivity. Qed.
