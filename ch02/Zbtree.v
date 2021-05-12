@@ -266,6 +266,14 @@ Proof.
     + rewrite IH2. repeat rewrite orb_true_r. reflexivity.
 Qed.
 
+(* Zbtree contains same elements *)
+Definition eqt (s t : Zbtree) : Prop
+  := forall n : Z, memb n s = true <-> memb n t = true.
+
+Theorem insert_in_st_memb2 (n : Z) (t : Zbtree) : eqt t (insert_in_searchtree n t).
+Proof.
+Admitted.
+
 Theorem insert_in_st_correct (n : Z) (t : Zbtree)
   : is_searchtree t = true
     -> let t' := insert_in_searchtree n t in
@@ -277,6 +285,20 @@ Proof.
 Qed.
 
 Definition list_to_searchtree l := List.fold_right insert_in_searchtree leaf l.
+
+Theorem list_to_st_is_st (ns : list Z)
+  : is_searchtree (list_to_searchtree ns) = true.
+Admitted.
+
+Fixpoint meml (m : Z) (ns : list Z) : bool
+  := match ns with
+     | nil => false
+     | cons n ns' => (n =? m) || meml m ns'
+     end.
+
+Theorem list_to_st_save_elements (ns : list Z) (n : Z)
+  : meml n ns = true <-> memb n (list_to_searchtree ns) = true.
+Admitted.
 
 Definition weak_sort l := infix_list (list_to_searchtree l).
 
@@ -297,3 +319,45 @@ Compute is_searchtree
                        (bnode 7 leaf leaf))
                 (bnode 15 (bnode 16 leaf leaf)
                        (bnode 18 leaf leaf)))%Z.
+
+(* Proove that weak_sort works *)
+
+Import ListNotations.
+
+Inductive sorted : list Z -> Prop
+  :=
+  | sorted0 : sorted []
+  | sorted1 (n : Z) : sorted [n]
+  | sorted_n (n0 n1 : Z) (ns : list Z) :
+      n0 <= n1
+      -> sorted (n1 :: ns)
+      -> sorted (n0 :: n1 :: ns).
+
+#[export] Hint Constructors sorted : sort.
+
+Theorem infix_list_sorted (t : Zbtree) : is_searchtree t = true -> sorted (infix_list t).
+Proof.
+Admitted.
+
+(* weak list equality : ns and ms contains same elements in any order and counts *)
+Definition weql (ns ms : list Z) : Prop
+  := forall z : Z, meml z ns = true <-> meml z ms = true.
+
+Theorem weak_sort_save_elements (ns : list Z) : weql ns (weak_sort ns).
+Proof.
+  induction ns as [| n ns' IH].
+  - (*[ ns = [] ]*) simpl. firstorder.
+  - (*[ ns = n :: ns' ]*)
+    simpl. (* apply IH. *)
+Admitted.
+
+Definition zsort : (list Z -> list Z) -> Prop
+  := fun fn => forall ns : list Z,
+         sorted (fn ns) /\ weql ns (fn ns).
+
+Theorem weak_sort_is_zsort : zsort weak_sort.
+Proof.
+  intros ns. split.
+  - unfold weak_sort. apply infix_list_sorted. apply list_to_st_is_st.
+  - apply weak_sort_save_elements.
+Qed.
