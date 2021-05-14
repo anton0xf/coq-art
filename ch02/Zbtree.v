@@ -626,17 +626,8 @@ Admitted.
 Theorem weql_is_weqlt (ns : list Z) (t : Zbtree)
   : weqlt ns t <-> weql ns (infix_list t).
 Proof.
-  split; intros H z.
-  - (* -> *) unfold weqlt in H. pose (H z) as H'.
-    destruct H' as [H1 H2]. clear H.
-    split; intro Hm.
-    + (* -> *) apply memb_is_meml, H1, Hm.
-    + (* <- *) apply H2, memb_is_meml, Hm.
-  - unfold weql in H. pose (H z) as H'.
-    destruct H' as [H1 H2]. clear H.
-    split; intro Hm.
-    + (* -> *) apply memb_is_meml, H1, Hm.
-    + (* <- *) apply H2, memb_is_meml, Hm.
+  split; intros H z;
+    split; firstorder using memb_is_meml.
 Qed.
 
 Theorem weqlt_insert (k : Z) (ns : list Z) (t : Zbtree)
