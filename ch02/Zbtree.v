@@ -351,7 +351,58 @@ Fixpoint meml (m : Z) (ns : list Z) : bool
      | cons n ns' => (n =? m) || meml m ns'
      end.
 
-Theorem list_to_st_save_elements (ns : list Z) (m : Z)
+Theorem meml_head (m : Z) (ns : list Z) : meml m (m :: ns) = true.
+Proof.
+  simpl. rewrite Z.eqb_refl. reflexivity.
+Qed.
+
+Theorem meml_tail (m n : Z) (ns : list Z)
+  : meml m ns = true -> meml m (n :: ns) = true.
+Proof.
+  intro H. simpl. apply orb_true_intro. right. assumption.
+Qed.
+
+Theorem meml_cons_inv (k n : Z) (ns : list Z)
+  : meml k (n :: ns) = true -> k = n \/ meml k ns = true.
+Proof.
+  intro H. simpl in H. apply orb_prop in H as [H | H].
+  - apply Z.eqb_eq in H. left. subst n. reflexivity.
+  - right. assumption.
+Qed.
+
+Theorem meml_app_l (k : Z) (ns ms : list Z)
+  : meml k ns = true -> meml k (ns ++ ms) = true.
+Proof.
+  intro H. induction ns as [| n ns' IH].
+  - inversion H.
+  - simpl. apply orb_true_intro.
+    apply meml_cons_inv in H as [H | H].
+    + left. subst n. apply Z.eqb_refl.
+    + right. apply IH, H.
+Qed.
+
+Theorem meml_app_r (k : Z) (ns ms : list Z)
+  : meml k ms = true -> meml k (ns ++ ms) = true.
+Proof.
+  intro H. induction ns as [| n ns' IH].
+  - simpl. assumption.
+  - simpl. apply orb_true_intro. right. assumption.
+Qed.
+
+Theorem meml_app_inv (k : Z) (ns ms : list Z)
+  : meml k (ns ++ ms) = true
+    -> meml k ns = true \/ meml k ms = true.
+Proof.
+  intro H. induction ns as [| n ns' IH].
+  - simpl in H. right. assumption.
+  - rewrite <- app_comm_cons in H.
+    apply meml_cons_inv in H as [H | H].
+    + left. subst n. apply meml_head.
+    + simpl. rewrite orb_true_iff. rewrite or_assoc. right.
+      apply IH, H.
+Qed.
+
+Theorem meml_is_memb_of_list_to_st (ns : list Z) (m : Z)
   : meml m ns = true <-> memb m (list_to_searchtree ns) = true.
 Proof.
   split; intro H.
@@ -369,6 +420,26 @@ Proof.
     + simpl. apply orb_true_intro. simpl in H.
       apply insert_in_st_memb2 in H as [H | H]; try lia.
       right. apply (IH H).
+Qed.
+
+Theorem memb_is_meml_of_infix_list (t : Zbtree) (z : Z)
+  : memb z t = true <-> meml z (infix_list t) = true.
+Proof.
+  split; intros H; induction t as [| r t1 IH1 t2 IH2];
+    try discriminate H.
+  - (* -> *) simpl. simpl in H.
+    repeat apply orb_prop in H as [H | H].
+    + apply Z.eqb_eq in H. subst r.
+      apply meml_app_r, meml_head.
+    + apply meml_app_l, IH1, H.
+    + apply meml_app_r, meml_tail, IH2, H.
+  - (* <- *) simpl. simpl in H.
+    repeat rewrite orb_true_iff.
+    apply meml_app_inv in H as [H | H].
+    + left. right. apply IH1, H.
+    + apply meml_cons_inv in H as [H | H].
+      * left. left. subst r. apply Z.eqb_refl.
+      * right. apply IH2, H.
 Qed.
 
 Definition weak_sort l := infix_list (list_to_searchtree l).
@@ -618,16 +689,11 @@ Definition weql (ns ms : list Z) : Prop
 Definition weqlt (ns : list Z) (t : Zbtree) : Prop
   := forall z : Z, meml z ns = true <-> memb z t = true.
 
-Theorem memb_is_meml (t : Zbtree) (z : Z)
-  : memb z t = true <-> meml z (infix_list t) = true.
-Proof.
-Admitted.
-
 Theorem weql_is_weqlt (ns : list Z) (t : Zbtree)
   : weqlt ns t <-> weql ns (infix_list t).
 Proof.
   split; intros H z;
-    split; firstorder using memb_is_meml.
+    split; firstorder using memb_is_meml_of_infix_list.
 Qed.
 
 Theorem weqlt_insert (k : Z) (ns : list Z) (t : Zbtree)
