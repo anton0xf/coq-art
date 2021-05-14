@@ -613,13 +613,48 @@ Qed.
 Definition weql (ns ms : list Z) : Prop
   := forall z : Z, meml z ns = true <-> meml z ms = true.
 
+(* weak list to Zbtree equality : ns and t contains same elements
+   in any order and counts *)
+Definition weqlt (ns : list Z) (t : Zbtree) : Prop
+  := forall z : Z, meml z ns = true <-> memb z t = true.
+
+Theorem memb_is_meml (t : Zbtree) (z : Z)
+  : memb z t = true <-> meml z (infix_list t) = true.
+Proof.
+Admitted.
+
+Theorem weql_is_weqlt (ns : list Z) (t : Zbtree)
+  : weqlt ns t <-> weql ns (infix_list t).
+Proof.
+  split; intros H z.
+  - (* -> *) unfold weqlt in H. pose (H z) as H'.
+    destruct H' as [H1 H2]. clear H.
+    split; intro Hm.
+    + (* -> *) apply memb_is_meml, H1, Hm.
+    + (* <- *) apply H2, memb_is_meml, Hm.
+  - unfold weql in H. pose (H z) as H'.
+    destruct H' as [H1 H2]. clear H.
+    split; intro Hm.
+    + (* -> *) apply memb_is_meml, H1, Hm.
+    + (* <- *) apply H2, memb_is_meml, Hm.
+Qed.
+
+Theorem weqlt_insert (k : Z) (ns : list Z) (t : Zbtree)
+  : weqlt ns t -> weqlt (k :: ns) (insert_in_searchtree k t).
+Proof.
+Admitted.
+
 Theorem weak_sort_save_elements (ns : list Z) : weql ns (weak_sort ns).
 Proof.
   induction ns as [| n ns' IH].
   - (*[ ns = [] ]*) simpl. firstorder.
   - (*[ ns = n :: ns' ]*)
-    simpl. (* apply IH. *)
-Admitted.
+    unfold weak_sort, list_to_searchtree. simpl.
+    remember (list_to_searchtree ns') as t eqn:eqt.
+    unfold list_to_searchtree in eqt. rewrite <- eqt.
+    apply weql_is_weqlt, weqlt_insert. subst t. apply weql_is_weqlt.
+    unfold weak_sort, list_to_searchtree in IH. apply IH.
+Qed.
 
 Definition zsort : (list Z -> list Z) -> Prop
   := fun fn => forall ns : list Z,
