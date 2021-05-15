@@ -370,6 +370,14 @@ Proof.
   - right. assumption.
 Qed.
 
+Theorem meml_transpose (k n1 n2 : Z) (ns : list Z)
+  : meml k (n1 :: n2 :: ns) = true -> meml k (n2 :: n1 :: ns) = true.
+Proof.
+  simpl. repeat rewrite orb_true_iff.
+  repeat rewrite orb_true_iff in H.
+  intro H. destruct H as [H | [H | H]]; firstorder.
+Qed.
+
 Theorem meml_app_l (k : Z) (ns ms : list Z)
   : meml k ns = true -> meml k (ns ++ ms) = true.
 Proof.
@@ -400,6 +408,14 @@ Proof.
     + left. subst n. apply meml_head.
     + simpl. rewrite orb_true_iff. rewrite or_assoc. right.
       apply IH, H.
+Qed.
+
+Theorem meml_app_comm (k : Z) (ns ms : list Z)
+  : meml k (ns ++ ms) = true -> meml k (ms ++ ns) = true.
+Proof.
+  intro H. apply meml_app_inv in H as [H | H].
+  - apply meml_app_r, H.
+  - apply meml_app_l, H.
 Qed.
 
 Theorem meml_is_memb_of_list_to_st (ns : list Z) (m : Z)
@@ -684,6 +700,108 @@ Qed.
 Definition weql (ns ms : list Z) : Prop
   := forall z : Z, meml z ns = true <-> meml z ms = true.
 
+Theorem weql_refl (ns : list Z) : weql ns ns.
+Proof.
+  unfold weql. intro z. reflexivity.
+Qed.
+
+Theorem weql_eq (ns ms : list Z) : ns = ms -> weql ns ms.
+Proof.
+  intro H. subst ms. apply weql_refl.
+Qed.
+
+Theorem weql_sym (ns ms : list Z) : weql ns ms -> weql ms ns.
+Proof.
+  unfold weql. intros H z. rewrite H. reflexivity.
+Qed.
+
+Theorem weql_sym_iff (ns ms : list Z) : weql ns ms <-> weql ms ns.
+Proof. split; apply weql_sym. Qed.
+
+Theorem weql_same (ns ms ks : list Z)
+  : weql ns ms -> weql ns ks -> weql ms ks.
+Proof.
+  unfold weql. intros Hnm Hnk z.
+  rewrite <- Hnm, <- Hnk. reflexivity.
+Qed.
+
+Theorem weql_trans (ns ms ks : list Z)
+  : weql ns ms -> weql ms ks -> weql ns ks.
+Proof.
+  unfold weql. intros Hnm Hmk z.
+  rewrite Hnm, <- Hmk. reflexivity.
+Qed.
+
+Theorem weql_cons_elim (m : Z) (ns : list Z)
+  : meml m ns = true -> weql ns (m :: ns).
+Proof.
+  unfold weql. intros Hm z. split; intro H.
+  - (* -> *) simpl. apply orb_true_intro. now right.
+  - (* <- *) simpl in H.
+    apply orb_prop in H as [H | H]; try assumption.
+    apply Z.eqb_eq in H. now subst z.
+Qed.
+
+Theorem weql_cons_intro (k : Z) (ns ms : list Z)
+  : weql ns ms -> weql (k :: ns) (k :: ms).
+Proof.
+  unfold weql. intros H z.
+  simpl. repeat rewrite orb_true_iff. now rewrite H.
+Qed.
+
+Theorem weql_cons_inv (m : Z) (ns ms : list Z)
+  : weql ns (m :: ms) -> meml m ns = true.
+Proof.
+  unfold weql. intro H. apply H, meml_head.
+Qed.
+
+Theorem weql_transpose (n1 n2 : Z) (ns : list Z)
+  : weql (n1 :: n2 :: ns) (n2 :: n1 :: ns).
+Proof.
+  unfold weql. intro z. split; apply meml_transpose.
+Qed.
+
+Theorem weql_app_sym (ns ms : list Z)
+  : weql (ns ++ ms) (ms ++ ns).
+Proof.
+  unfold weql. intro z. split; apply meml_app_comm.
+Qed.
+
+Theorem weql_app_sym_r (ks ns ms : list Z)
+  : weql ks (ns ++ ms) -> weql ks (ms ++ ns).
+Proof.
+  intro H. apply (weql_trans ks _ _ H), weql_app_sym.
+Qed.
+
+Theorem weql_app_sym_l (ks ns ms : list Z)
+  : weql (ns ++ ms) ks -> weql (ms ++ ns) ks .
+Proof.
+  intro H. apply weql_sym.
+  apply weql_sym in H. apply weql_app_sym_r, H.
+Qed.
+
+Theorem weql_app (ns1 ns2 ks1 ks2 : list Z)
+  : weql ns1 ks1 -> weql ns2 ks2 -> weql (ns1 ++ ns2) (ks1 ++ ks2).
+Proof.
+  unfold weql. intros H1 H2 z. split; intro H.
+  - apply meml_app_inv in H as [H | H].
+    + apply meml_app_l, H1, H.
+    + apply meml_app_r, H2, H.
+  - apply meml_app_inv in H as [H | H].
+    + apply meml_app_l, H1, H.
+    + apply meml_app_r, H2, H.
+Qed.
+
+Theorem weql_app_r (ns ms ks : list Z)
+  : weql ms ks -> weql (ns ++ ms) (ns ++ ks).
+Proof. apply weql_app, weql_refl. Qed.
+
+Theorem weql_app_l (ns ms ks : list Z)
+  : weql ms ks -> weql (ms ++ ns) (ks ++ ns).
+Proof.
+  intro H. apply weql_app, weql_refl. apply H.
+Qed.
+
 (* weak list to Zbtree equality : ns and t contains same elements
    in any order and counts *)
 Definition weqlt (ns : list Z) (t : Zbtree) : Prop
@@ -696,10 +814,68 @@ Proof.
     split; firstorder using memb_is_meml_of_infix_list.
 Qed.
 
+Theorem weqlt_infix_list (t : Zbtree) : weqlt (infix_list t) t.
+Proof. apply weql_is_weqlt, weql_refl. Qed.
+
+Theorem diff_false_true' : (false = true <-> False).
+Proof. split; now intro H. Qed.
+
+Theorem or_false_r (A : Prop) : A \/ False <-> A.
+Proof. firstorder. Qed.
+
+Theorem weqlt_prop (ns : list Z) (r : Z) (t1 t2 : Zbtree)
+  : weqlt ns (bnode r t1 t2)
+    <-> exists ns1 ns2 : list Z,
+      weql ns (r :: ns1 ++ ns2) /\ weqlt ns1 t1 /\ weqlt ns2 t2.
+Proof.
+  symmetry. split; intro H.
+  - destruct H as [ns1 [ns2 [H [H1 H2]]]].
+    apply weql_is_weqlt. simpl.
+    apply weql_is_weqlt in H1, H2.
+    apply (weql_trans ns _ _ H).
+    apply weql_app_sym_r. simpl.
+    apply weql_cons_intro.
+    apply weql_app_sym_r, weql_app; assumption.
+  - exists (infix_list t1), (infix_list t2).
+    apply weql_is_weqlt in H. simpl in H.
+    split; try auto using weqlt_infix_list.
+    apply (weql_trans ns _ _ H).
+    apply weql_app_sym_l. simpl.
+    apply weql_cons_intro, weql_app_sym_l, weql_refl.
+Qed.
+
 Theorem weqlt_insert (k : Z) (ns : list Z) (t : Zbtree)
   : weqlt ns t -> weqlt (k :: ns) (insert_in_searchtree k t).
 Proof.
-Admitted.
+  generalize dependent ns.
+  induction t as [| r t1 IH1 t2 IH2]; intros ns H.
+  - simpl. unfold weqlt. simpl. intro z.
+    repeat rewrite orb_true_iff. rewrite Z.eqb_eq.
+    rewrite diff_false_true'. repeat rewrite or_false_r.
+    unfold weqlt in H. simpl in H.
+    pose (H z) as H'. rewrite diff_false_true' in H'.
+    rewrite H'. rewrite or_false_r. reflexivity.
+  - apply weqlt_prop in H as [ns1 [ns2 [H [H1 H2]]]].
+    simpl. destruct (k ?= r) eqn:Hkr;
+      try apply Z.compare_eq_iff in Hkr;
+      try rewrite Z.compare_lt_iff in Hkr;
+      try rewrite Z.compare_gt_iff in Hkr.
+    + subst k. apply weqlt_prop. exists ns1, ns2.
+      split. 2:{ split; assumption. }
+      apply (weql_trans (r :: ns) ns); try assumption.
+      apply weql_cons_inv in H.
+      apply weql_sym, weql_cons_elim, H.
+    + apply weqlt_prop. exists (k :: ns1), ns2. split.
+      * apply (weql_cons_intro k _ _) in H.
+          apply (weql_trans _ _ _ H). simpl.
+          apply weql_transpose.
+      * split; firstorder.
+    + apply weqlt_prop. exists ns1, (k :: ns2). split.
+      * rewrite app_comm_cons. apply weql_app_sym_r.
+        simpl. apply weql_cons_intro, weql_app_sym_r.
+        simpl. assumption.
+      * split; firstorder.
+Qed.
 
 Theorem weak_sort_save_elements (ns : list Z) : weql ns (weak_sort ns).
 Proof.
@@ -709,7 +885,7 @@ Proof.
     unfold weak_sort, list_to_searchtree. simpl.
     remember (list_to_searchtree ns') as t eqn:eqt.
     unfold list_to_searchtree in eqt. rewrite <- eqt.
-    apply weql_is_weqlt, weqlt_insert. subst t. apply weql_is_weqlt.
+    apply weql_is_weqlt. apply weqlt_insert. subst t. apply weql_is_weqlt.
     unfold weak_sort, list_to_searchtree in IH. apply IH.
 Qed.
 
