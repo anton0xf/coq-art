@@ -116,5 +116,95 @@ Section Minimal_propositional_logic.
                   fun (p : P) (_ : Q) => p
                 : P -> Q -> P *)
 
+  Definition f : (nat -> bool) -> (nat -> bool) -> nat -> bool.
+    intros f1 f2. assumption.
+  Defined.
+
+  Print f.
+  (* f = [fun f1 f2 => f2]
+       fun _ f2 : nat -> bool => f2
+     : (nat -> bool) -> (nat -> bool) -> nat -> bool *)
+
+  Eval compute in (f (fun n => true) (fun n => false) 45).
+  (* = false : bool *)
+
+  Opaque f.
+
+  Eval compute in (f (fun n => true) (fun n => false) 45).
+  (* = f (fun _ : nat => true) (fun _ : nat => false) 45 : bool *)
+
+  Section proof_of_triple_impl.
+    Hypothesis H : ((P -> Q) -> Q) -> Q.
+    Hypothesis p : P.
+
+    Lemma Rem: (P -> Q) -> Q.
+    Proof using p.
+      exact (fun H0 : P -> Q => H0 p).
+    Qed.
+
+    Theorem triple_impl : Q.
+    Proof using H p. exact (H Rem). Qed.
+  End proof_of_triple_impl.
+
+  Print triple_impl.
+  (* triple_impl = [fun H p => H (Rem p)]
+     fun (H : ((P -> Q) -> Q) -> Q) (p : P) => H (Rem p)
+     : (((P -> Q) -> Q) -> Q) -> P -> Q *)
+
+  Print Rem.
+  (* Rem = fun (p : P) (H0 : P -> Q) => H0 p
+         : P -> (P -> Q) -> Q *)
+
+  Theorem then_example : P -> Q -> (P -> Q -> R) -> R.
+  Proof using.
+    intros p q H.
+    apply H; assumption.
+  Qed.
+
+  Theorem triple_impl_one_shot : (((P -> Q) -> Q) -> Q) -> P -> Q.
+  Proof using.
+    intros H p; apply H; intro H0; apply H0; assumption.
+  Qed.
+
+  Theorem compose_example : (P -> Q -> R) -> (P -> Q) -> P -> R.
+  Proof using.
+    intros H H' p.
+    apply H; [exact p | exact (H' p)].
+  Qed.
+
+  Theorem compose_example' : (P -> Q -> R) -> (P -> Q) -> P -> R.
+  Proof using.
+    intros H H' p.
+    apply H; try apply H'; assumption.
+  Qed.
+
+  Theorem orelse_example
+    : (P -> Q) -> R -> ((P -> Q) -> R -> (T -> Q) -> T) -> T.
+  Proof.
+    intros H r H0. apply H0; (assumption || intro H1).
+  Abort.
+
+  Lemma L3 : (P -> Q) -> (P -> R) -> (P -> Q -> R -> T) -> P -> T.
+  Proof using.
+    intros H H0 H1 p.
+    apply H1; [idtac | apply H | apply H0]; assumption.
+  Qed.
+
+  Theorem then_fail_example : (P -> Q) -> (P -> Q).
+  Proof using.
+    intro X; apply X; fail.
+  Qed.
+
+  Theorem then_fail_example2 : ((P -> P) -> (Q -> Q) -> R) -> R.
+  Proof using.
+    (* intro X; apply X; fail. *)
+  Abort.
+
+  Theorem try_example : (P -> Q -> R -> T) -> (P -> Q) -> (P -> R -> T).
+  Proof using.
+    intros H H' p r.
+    apply H; try assumption. apply H', p.
+  Qed.
+
 End Minimal_propositional_logic.
 
