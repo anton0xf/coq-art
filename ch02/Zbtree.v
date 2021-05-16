@@ -288,6 +288,11 @@ Definition eqt (s t : Zbtree) : Prop
   := forall n : Z, memb n s = true <-> memb n t = true.
 
 Require Import Lia.
+Ltac simpl_z_compare id
+  := (apply Z.compare_eq_iff in id)
+     || (rewrite Z.compare_lt_iff in id)
+     || rewrite Z.compare_gt_iff in id.
+
 Theorem insert_in_st_memb1 (n m : Z) (t : Zbtree)
   : is_searchtree t = true -> memb m t = true
     -> memb m (insert_in_searchtree n t) = true.
@@ -300,9 +305,7 @@ Proof.
     repeat apply orb_prop in Hm as [Hm | Hm];
       destruct (n ?= r) eqn:neq_nr; simpl;
       try apply Z.eqb_eq in H;
-      try apply Z.compare_eq_iff in neq_nr;
-      try rewrite Z.compare_lt_iff in neq_nr;
-      try rewrite Z.compare_gt_iff in neq_nr;
+      simpl_z_compare neq_nr;
       try rewrite Hm; try lia.
     + rewrite (IH1 Hs1 Hm). lia.
     + rewrite (IH2 Hs2 Hm). lia.
@@ -316,14 +319,12 @@ Proof.
   - simpl in H. lia.
   - right. simpl in H. simpl.
     destruct (n ?= r) eqn:Hnr;
-      try apply Z.compare_eq_iff in Hnr;
-      try rewrite Z.compare_lt_iff in Hnr;
-      try rewrite Z.compare_gt_iff in Hnr;
+      simpl_z_compare Hnr;
       try assumption; simpl in H;
         repeat apply orb_prop in H as [H | H];
-        try rewrite H; try lia.
-    + apply IH1 in H as [H | H]; try rewrite H; try lia.
-    + apply IH2 in H as [H | H]; try rewrite H; try lia.
+        try rewrite H; try lia;
+          [ apply IH1 in H as [H | H] | apply IH2 in H as [H | H] ];
+          try rewrite H; try lia.
 Qed.
 
 Theorem insert_in_st_correct (n : Z) (t : Zbtree)
@@ -635,7 +636,7 @@ Qed.
 Theorem cons_sorted_inv (n : Z) (ns : list Z)
   : sorted (n :: ns) -> sorted ns.
 Proof.
-  intro H. destruct ns as [| n1 ns1 IH]; try constructor.
+  intro H. destruct ns as [| n1 ns1]; try constructor.
   inversion H. assumption.
 Qed.
 
@@ -852,11 +853,8 @@ Proof.
     unfold weqlt in H. simpl in H.
     pose (H z) as H'. rewrite diff_false_true' in H'.
     rewrite H'. rewrite or_false_r. reflexivity.
-  - apply weqlt_prop in H as [ns1 [ns2 [H [H1 H2]]]].
-    simpl. destruct (k ?= r) eqn:Hkr;
-      try apply Z.compare_eq_iff in Hkr;
-      try rewrite Z.compare_lt_iff in Hkr;
-      try rewrite Z.compare_gt_iff in Hkr.
+  - apply weqlt_prop in H as [ns1 [ns2 [H [H1 H2]]]]. simpl.
+    destruct (k ?= r) eqn:Hkr; simpl_z_compare Hkr.
     + subst k. apply weqlt_prop. exists ns1, ns2.
       split. 2:{ split; assumption. }
       apply (weql_trans (r :: ns) ns); try assumption.
