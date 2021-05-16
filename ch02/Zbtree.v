@@ -116,32 +116,32 @@ Theorem right_greater_than_center (r : Z) (t1 t2 : Zbtree)
         -> forall n : Z, memb n t2 = true -> r < n.
 Proof.
   intro Hs.
-  induction t2 as [| r2 t21 IH1 t22 IH2]; intros n Hm.
-  - inversion Hm.
-  - simpl in Hm. remember (bnode r2 t21 t22) as t2.
-    simpl in Hs.
-    apply andb_prop in Hs as [Hs Hs2].
-    apply andb_prop in Hs as [Hs Hs1].
-    apply andb_prop in Hs as [Hsm2 Hsm1].
-    rewrite Heqt2 in Hs2. simpl in Hs2.
-    apply andb_prop in Hs2 as [Hs2 Hs22].
-    apply andb_prop in Hs2 as [Hs2 Hs21].
-    apply andb_prop in Hs2 as [Hsm22 Hsm21].
-    rewrite Heqt2 in Hsm2. simpl in Hsm2.
-    apply andb_prop in Hsm2 as [Hsm2 Hsm22'].
-    apply andb_prop in Hsm2 as [neq Hsm21'].
-    assert (is_searchtree (bnode r t1 t21) = true) as Hs1_21.
-    { simpl. repeat (apply andb_true_intro; split); assumption. }
-    pose (IH1 Hs1_21 n) as H1.
-    assert (is_searchtree (bnode r t1 t22) = true) as Hs1_22.
-    { simpl. repeat (apply andb_true_intro; split); assumption. }
-    pose (IH2 Hs1_22 n) as H2.
-    apply orb_prop in Hm as [Hm | Hm22].
-    apply orb_prop in Hm as [eq | Hm21].
-    + apply Z.eqb_eq in eq. subst n.
-      apply Z.ltb_lt. assumption.
-    + apply H1, Hm21.
-    + apply H2, Hm22.
+  induction t2 as [| r2 t21 IH1 t22 IH2]; intros n Hm;
+    try (inversion Hm; fail).
+  simpl in Hm. remember (bnode r2 t21 t22) as t2.
+  simpl in Hs.
+  apply andb_prop in Hs as [Hs Hs2].
+  apply andb_prop in Hs as [Hs Hs1].
+  apply andb_prop in Hs as [Hsm2 Hsm1].
+  rewrite Heqt2 in Hs2. simpl in Hs2.
+  apply andb_prop in Hs2 as [Hs2 Hs22].
+  apply andb_prop in Hs2 as [Hs2 Hs21].
+  apply andb_prop in Hs2 as [Hsm22 Hsm21].
+  rewrite Heqt2 in Hsm2. simpl in Hsm2.
+  apply andb_prop in Hsm2 as [Hsm2 Hsm22'].
+  apply andb_prop in Hsm2 as [neq Hsm21'].
+  assert (is_searchtree (bnode r t1 t21) = true) as Hs1_21.
+  { simpl. repeat (apply andb_true_intro; split); assumption. }
+  pose (IH1 Hs1_21 n) as H1.
+  assert (is_searchtree (bnode r t1 t22) = true) as Hs1_22.
+  { simpl. repeat (apply andb_true_intro; split); assumption. }
+  pose (IH2 Hs1_22 n) as H2.
+  apply orb_prop in Hm as [Hm | Hm22].
+  apply orb_prop in Hm as [eq | Hm21].
+  - apply Z.eqb_eq in eq. subst n.
+    apply Z.ltb_lt. assumption.
+  - apply H1, Hm21.
+  - apply H2, Hm22.
 Qed.
 
 Theorem left_lower_than_center (r : Z) (t1 t2 : Zbtree)
@@ -149,32 +149,32 @@ Theorem left_lower_than_center (r : Z) (t1 t2 : Zbtree)
         -> forall n : Z, memb n t1 = true -> n < r.
 Proof.
   intro Hs.
-  induction t1 as [| r1 t11 IH1 t12 IH2]; intros n Hm.
-  - inversion Hm.
-  - simpl in Hm. remember (bnode r1 t11 t12) as t1.
-    simpl in Hs.
-    apply andb_prop in Hs as [Hs Hs2].
-    apply andb_prop in Hs as [Hs Hs1].
-    apply andb_prop in Hs as [Hsm2 Hsm1].
-    rewrite Heqt1 in Hs1. simpl in Hs1.
-    apply andb_prop in Hs1 as [Hs1 Hs12].
-    apply andb_prop in Hs1 as [Hs1 Hs11].
-    apply andb_prop in Hs1 as [Hsm12 Hsm11].
-    rewrite Heqt1 in Hsm1. simpl in Hsm1.
-    apply andb_prop in Hsm1 as [Hsm1 Hsm12'].
-    apply andb_prop in Hsm1 as [neq Hsm11'].
-    assert (is_searchtree (bnode r t11 t2) = true) as Hs11_2.
-    { simpl. repeat (apply andb_true_intro; split); assumption. }
-    pose (IH1 Hs11_2 n) as H1.
-    assert (is_searchtree (bnode r t12 t2) = true) as Hs12_2.
-    { simpl. repeat (apply andb_true_intro; split); assumption. }
-    pose (IH2 Hs12_2 n) as H2.
-    apply orb_prop in Hm as [Hm | Hm22].
-    apply orb_prop in Hm as [eq | Hm21].
-    + apply Z.eqb_eq in eq. subst n.
-      apply Z.ltb_lt. assumption.
-    + apply H1, Hm21.
-    + apply H2, Hm22.
+  induction t1 as [| r1 t11 IH1 t12 IH2]; intros n Hm;
+    try (inversion Hm; fail).
+  simpl in Hm. remember (bnode r1 t11 t12) as t1.
+  simpl in Hs.
+  apply andb_prop in Hs as [Hs Hs2].
+  apply andb_prop in Hs as [Hs Hs1].
+  apply andb_prop in Hs as [Hsm2 Hsm1].
+  rewrite Heqt1 in Hs1. simpl in Hs1.
+  apply andb_prop in Hs1 as [Hs1 Hs12].
+  apply andb_prop in Hs1 as [Hs1 Hs11].
+  apply andb_prop in Hs1 as [Hsm12 Hsm11].
+  rewrite Heqt1 in Hsm1. simpl in Hsm1.
+  apply andb_prop in Hsm1 as [Hsm1 Hsm12'].
+  apply andb_prop in Hsm1 as [neq Hsm11'].
+  assert (is_searchtree (bnode r t11 t2) = true) as Hs11_2.
+  { simpl. repeat (apply andb_true_intro; split); assumption. }
+  pose (IH1 Hs11_2 n) as H1.
+  assert (is_searchtree (bnode r t12 t2) = true) as Hs12_2.
+  { simpl. repeat (apply andb_true_intro; split); assumption. }
+  pose (IH2 Hs12_2 n) as H2.
+  apply orb_prop in Hm as [Hm | Hm22].
+  apply orb_prop in Hm as [eq | Hm21].
+  - apply Z.eqb_eq in eq. subst n.
+    apply Z.ltb_lt. assumption.
+  - apply H1, Hm21.
+  - apply H2, Hm22.
 Qed.
 
 Theorem memb_in_st_correct (n : Z) (t : Zbtree)
@@ -297,18 +297,17 @@ Theorem insert_in_st_memb1 (n m : Z) (t : Zbtree)
   : is_searchtree t = true -> memb m t = true
     -> memb m (insert_in_searchtree n t) = true.
 Proof.
-  induction t as [| r t1 IH1 t2 IH2]; intros Hs Hm.
-  - inversion Hm.
-  - pose (left_is_search_tree r t1 t2 Hs) as Hs1.
-    pose (right_is_search_tree r t1 t2 Hs) as Hs2.
-    simpl in Hm. simpl.
-    repeat apply orb_prop in Hm as [Hm | Hm];
-      destruct (n ?= r) eqn:neq_nr; simpl;
+  induction t as [| r t1 IH1 t2 IH2]; intros Hs Hm;
+    try (inversion Hm; fail).
+  pose (left_is_search_tree r t1 t2 Hs) as Hs1.
+  pose (right_is_search_tree r t1 t2 Hs) as Hs2.
+  simpl in Hm. simpl.
+  repeat apply orb_prop in Hm as [Hm | Hm];
+    destruct (n ?= r) eqn:neq_nr; simpl;
       try apply Z.eqb_eq in H;
       simpl_z_compare neq_nr;
-      try rewrite Hm; try lia.
-    + rewrite (IH1 Hs1 Hm). lia.
-    + rewrite (IH2 Hs2 Hm). lia.
+      try rewrite Hm; try lia;
+        [rewrite (IH1 Hs1 Hm) | rewrite (IH2 Hs2 Hm)]; lia.
 Qed.
 
 Theorem insert_in_st_memb2 (n m : Z) (t : Zbtree)
@@ -382,12 +381,11 @@ Qed.
 Theorem meml_app_l (k : Z) (ns ms : list Z)
   : meml k ns = true -> meml k (ns ++ ms) = true.
 Proof.
-  intro H. induction ns as [| n ns' IH].
-  - inversion H.
-  - simpl. apply orb_true_intro.
-    apply meml_cons_inv in H as [H | H].
-    + left. subst n. apply Z.eqb_refl.
-    + right. apply IH, H.
+  intro H. induction ns as [| n ns' IH]; try (inversion H; fail).
+  simpl. apply orb_true_intro.
+  apply meml_cons_inv in H as [H | H].
+  - left. subst n. apply Z.eqb_refl.
+  - right. apply IH, H.
 Qed.
 
 Theorem meml_app_r (k : Z) (ns ms : list Z)
@@ -423,15 +421,13 @@ Theorem meml_is_memb_of_list_to_st (ns : list Z) (m : Z)
   : meml m ns = true <-> memb m (list_to_searchtree ns) = true.
 Proof.
   split; intro H.
-  - (* -> *) induction ns as [| n ns' IH].
-    + inversion H.
-    + simpl. remember (list_to_searchtree ns') as t eqn:eqt.
-      simpl in H. apply orb_prop in H as [H | H].
-      * apply Z.eqb_eq in H. subst m. apply insert_in_st_memb.
-      * { apply insert_in_st_memb1.
-          - rewrite eqt. apply list_to_st_is_st.
-          - apply IH, H.
-        }
+  - (* -> *) induction ns as [| n ns' IH]; try discriminate H.
+    simpl. remember (list_to_searchtree ns') as t eqn:eqt.
+    simpl in H. apply orb_prop in H as [H | H].
+    + apply Z.eqb_eq in H. subst m. apply insert_in_st_memb.
+    + apply insert_in_st_memb1.
+      * rewrite eqt. apply list_to_st_is_st.
+      * apply IH, H.
   - (* <- *) induction ns as [| n ns' IH].
     + simpl in H. discriminate H.
     + simpl. apply orb_true_intro. simpl in H.
