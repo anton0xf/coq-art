@@ -783,13 +783,10 @@ Qed.
 Theorem weql_app (ns1 ns2 ks1 ks2 : list Z)
   : weql ns1 ks1 -> weql ns2 ks2 -> weql (ns1 ++ ns2) (ks1 ++ ks2).
 Proof.
-  unfold weql. intros H1 H2 z. split; intro H.
-  - apply meml_app_inv in H as [H | H].
-    + apply meml_app_l, H1, H.
-    + apply meml_app_r, H2, H.
-  - apply meml_app_inv in H as [H | H].
-    + apply meml_app_l, H1, H.
-    + apply meml_app_r, H2, H.
+  unfold weql. intros H1 H2 z.
+  split; intro H;
+    apply meml_app_inv in H as [H | H];
+    firstorder using meml_app_l, meml_app_r.
 Qed.
 
 Theorem weql_app_r (ns ms ks : list Z)
