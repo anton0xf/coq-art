@@ -206,5 +206,140 @@ Section Minimal_propositional_logic.
     apply H; try assumption. apply H', p.
   Qed.
 
+  Theorem imp_dist' : (P -> Q -> R) -> (P -> Q) -> P -> R.
+  Proof using.
+    intros. apply H.
+    - exact H1.
+    - exact (H0 H1).
+  Qed.
+
+  Section section_for_cut_example.
+    Hypotheses (H : P -> Q)
+               (H0 : Q -> R)
+               (H1 : (P -> R) -> T -> Q)
+               (H2 : (P -> R) -> T).
+
+    Theorem cut_example : Q.
+    Proof using H H0 H1 H2.
+      cut (P -> R).
+      - intro H3. apply H1; [idtac | apply H2]; assumption.
+      - intro Hp. apply H0, H, Hp.
+    Qed.
+
+    Print cut_example.
+    (* cut_example =
+       let H3 : P -> R := fun Hp : P => H0 (H Hp)
+       in (fun H4 : P -> R => H1 H4 (H2 H4)) H3
+       : Q *)
+
+    Theorem cut_example' : Q.
+    Proof using H H0 H1 H2.
+      assert (P -> R) as H3.
+      { intro Hp. apply H0, H, Hp. }
+      apply H1; [idtac | apply H2]; assumption.
+    Qed.
+
+    Print cut_example'.
+    (* cut_example' =
+       let H3 : P -> R := fun Hp : P => H0 (H Hp)
+       in H1 H3 (H2 H3)
+       : Q *)
+
+    Theorem cut_example0 : Q.
+    Proof using H H0 H1 H2.
+      apply H1.
+      - intro Hp. apply H0, H, Hp.
+      - apply H2.
+        intro Hp. apply H0, H, Hp.
+    Qed.
+
+    Print cut_example0.
+    (* cut_example0 =
+       H1 (fun Hp : P => H0 (H Hp)) (H2 (fun Hp : P => H0 (H Hp)))
+       : Q *)
+  End section_for_cut_example.
+
+  Theorem triple_impl' : (((P -> Q) -> Q) -> Q) -> P -> Q.
+  Proof using. auto. Qed.
+
+  Theorem auto1 : (P -> Q) -> P -> Q.
+  Proof using. auto 0. auto 1. Qed.
+
+  Print auto1.
+  (* auto1 = fun H : P -> Q => H
+           : (P -> Q) -> P -> Q *)
+
+  Theorem auto2 : ((Q -> P) -> Q) -> P -> Q.
+  Proof using. auto 1. auto 2. Qed.
+
+  Print auto2.
+  (* auto2 = fun (H : (Q -> P) -> Q) (H0 : P) => H (fun _ : Q => H0)
+           : ((Q -> P) -> Q) -> P -> Q *)
+
+  Theorem auto_t2 : P -> (P -> Q) -> Q.
+  Proof using. auto 1. auto 2. Qed.
+
+  Theorem auto3 : (((P -> Q) -> Q) -> Q) -> P -> Q.
+  Proof using. auto 2. auto 3. Qed.
+
+  Print auto3.
+  (* auto3 = [fun H H0 => H (fun H1 => H1 H0)]
+     fun (H : ((P -> Q) -> Q) -> Q) (H0 : P) => H (fun H1 : P -> Q => H1 H0)
+     : (((P -> Q) -> Q) -> Q) -> P -> Q *)
+
+  Theorem auto3' : ((((Q -> P) -> Q) -> Q) -> Q) -> P -> Q.
+  Proof using. auto 2. auto 3. Qed.
+
+  Print auto3'.
+  (* auto3' = [fun H H0 => H (fun H1 => H1 (fun _ => H0))]
+     fun (H : (((Q -> P) -> Q) -> Q) -> Q) (H0 : P)
+         => H (fun H1 : (Q -> P) -> Q => H1 (fun _ : Q => H0))
+     : ((((Q -> P) -> Q) -> Q) -> Q) -> P -> Q *)
+
+  Theorem auto_t3 : P -> (P -> Q) -> (Q -> R) -> R.
+  Proof using. auto 2. auto 3. Qed.
+
+  Theorem auto4 : (((((P -> Q) -> Q) -> Q) -> Q) -> Q) -> P -> Q.
+  Proof using. auto 3. auto 4. Qed.
+
+  Theorem auto4' : ((((((Q -> P) -> Q) -> Q) -> Q) -> Q) -> Q) -> P -> Q.
+  Proof using. auto 3. auto 4. Qed.
+
+  Theorem auto_t4 : P -> (P -> Q) -> (Q -> R) -> (R -> T) -> T.
+  Proof using. auto 3. auto 4. Qed.
+
+  Theorem auto5 : (((((((P -> Q) -> Q) -> Q) -> Q) -> Q) -> Q) -> Q)
+                  -> P -> Q.
+  Proof using. auto 4. auto 5. Qed.
+
+  Variables S U : Prop.
+
+  Theorem auto_t5 : P -> (P -> Q) -> (Q -> R) -> (R -> T) -> (T -> S) -> S.
+  Proof using. auto 4. auto 5. Qed.
+
+  Theorem auto6 : (((((((((P -> Q) -> Q) -> Q) -> Q) -> Q)
+                      -> Q) -> Q) -> Q) -> Q)
+                  -> P -> Q.
+  Proof using. auto 5. auto 6. Qed.
+
+  Theorem auto_t6 : P -> (P -> Q) -> (Q -> R) -> (R -> T) -> (T -> S)
+                    -> (S -> U) -> U.
+  Proof using. auto 5. auto 6. Qed.
 End Minimal_propositional_logic.
 
+Print imp_dist.
+(* imp_dist =
+   fun (P Q R : Prop) (H : P -> Q -> R) (H' : P -> Q) (p : P) => H p (H' p)
+   : forall P Q R : Prop, (P -> Q -> R) -> (P -> Q) -> P -> R *)
+
+Section using_imp_dist.
+  Variables (P1 P2 P3 : Prop).
+  Check (imp_dist P1 P2 P3).
+  (* imp_dist P1 P2 P3
+     : (P1 -> P2 -> P3) -> (P1 -> P2) -> P1 -> P3 *)
+
+  Check (imp_dist (P1 -> P2) (P2 -> P3) (P3 -> P1)).
+  (* imp_dist (P1 -> P2) (P2 -> P3) (P3 -> P1)
+     : ((P1 -> P2) -> (P2 -> P3) -> P3 -> P1) ->
+       ((P1 -> P2) -> P2 -> P3) -> (P1 -> P2) -> P3 -> P1 *)
+End using_imp_dist.
