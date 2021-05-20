@@ -148,6 +148,9 @@ Print compose.
    fun (A B C : Set) (f : A -> B) (g : B -> C) (x : A) => g (f x)
    : forall A B C : Set, (A -> B) -> (B -> C) -> A -> C *)
 
+Check compose.
+(* compose : forall A B C : Set, (A -> B) -> (B -> C) -> A -> C *)
+
 Check (fun (A : Set) (f : Z -> A) => compose _ _ _ Z_of_nat f).
 (* fun (A : Set) (f : Z -> A) => compose nat Z A Z.of_nat f
    : forall A : Set, (Z -> A) -> nat -> A *)
@@ -160,7 +163,25 @@ Check (le_S _ _ (le_n_SSn 1515)).
 (* le_S 1515 1517 (le_n_SSn 1515) : 1515 <= 1518 *)
 
 Arguments compose [A B C].
-Arguments le_S [n m].
+Check compose.
+(* compose : forall A B C : Set, (A -> B) -> (B -> C) -> A -> C *)
+Print Implicit compose.
+(* compose : forall [A B C : Set], (A -> B) -> (B -> C) -> A -> C
+   Arguments A, B, C are implicit *)
+
+
+Arguments compose {A B C}.
+Arguments le_S {n m}.
+
+Check compose.
+(* compose : (?A -> ?B) -> (?B -> ?C) -> ?A -> ?C
+   where ?A : [ |- Set]
+         ?B : [ |- Set]
+         ?C : [ |- Set] *)
+
+Print Implicit compose.
+(* compose : forall {A B C : Set}, (A -> B) -> (B -> C) -> A -> C
+   Arguments A, B, C are implicit and maximally inserted *)
 
 Check (compose Z.abs_nat (plus 78)).
 (* compose Z.abs_nat (Init.Nat.add 78) : Z -> nat *)
@@ -192,3 +213,21 @@ Print Implicit thrice.
 
 Eval cbv beta delta in (thrice (thrice (A := nat)) S 0).
 (* = 27 : nat *)
+
+Check (thrice (thrice (A := nat)) S 0).
+(* thrice (thrice (A:=nat)) S 0 : nat *)
+
+(* Check (thrice thrice S 0). *)
+(* Toplevel input, characters 14-20:
+   > Check (thrice thrice S 0).
+   >               ^^^^^^
+   Error:
+   The term "thrice" has type "forall A : Set, (A -> A) -> A -> A"
+   while it is expected to have type "?A -> ?A"
+   (unable to find a well-typed instantiation for
+   "?A": cannot ensure that "Type" is a subtype of
+   "Set"). *)
+
+Arguments thrice {A}.
+Check (thrice thrice S 0).
+(* thrice thrice S 0 : nat *)
