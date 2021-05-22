@@ -137,14 +137,14 @@ Proof. exact (le_S _ _ (le_S _ _ (le_n n))). Qed.
 Theorem le_n_SSn' (n : nat) : n <= S (S n).
 Proof. apply le_S, le_S, le_n. Qed.
 Print le_n_SSn'.
-(* le_n_SSn' = 
+(* le_n_SSn' =
    fun n : nat => le_S n (S n) (le_S n n (le_n n))
    : forall n : nat, n <= S (S n) *)
 
 Definition compose (A B C : Set) : (A -> B) -> (B -> C) -> A -> C
   := fun f g x => g (f x).
 Print compose.
-(* compose = 
+(* compose =
    fun (A B C : Set) (f : A -> B) (g : B -> C) (x : A) => g (f x)
    : forall A B C : Set, (A -> B) -> (B -> C) -> A -> C *)
 
@@ -217,6 +217,9 @@ Eval cbv beta delta in (thrice (thrice (A := nat)) S 0).
 Check (thrice (thrice (A := nat)) S 0).
 (* thrice (thrice (A:=nat)) S 0 : nat *)
 
+Check (thrice (A := nat -> nat) (thrice (A := nat)) S 0).
+(* thrice (thrice (A:=nat)) S 0 : nat *)
+
 (* Check (thrice thrice S 0). *)
 (* Toplevel input, characters 14-20:
    > Check (thrice thrice S 0).
@@ -231,3 +234,219 @@ Check (thrice (thrice (A := nat)) S 0).
 Arguments thrice {A}.
 Check (thrice thrice S 0).
 (* thrice thrice S 0 : nat *)
+
+Definition short_concat : short -> short -> long
+  := binary_word_concat 32 32.
+
+Check (binary_word_concat 32 32).
+(* binary_word_concat 32 32
+   : binary_word 32 -> binary_word 32 -> binary_word (32 + 32) *)
+
+Print short. (* short = binary_word 32 : Set *)
+Print long. (* long = binary_word 64 : Set *)
+Eval cbv delta beta iota in (binary_word (32 + 32)).
+(* = binary_word 64 : Set *)
+
+(* Exercise 4.3
+   In the context of the following section, verify that the three
+   theorems have well-formed statements and then construct terms
+   that inhabit these types. *)
+Section A_declared.
+  Variables (A : Set) (P Q : A -> Prop) (R : A -> A -> Prop).
+
+  Theorem all_perm : (forall a b : A, R a b) -> forall a b : A, R b a.
+  Proof using. intros H a b. apply H. Qed.
+
+  Theorem all_imp_dist
+    : (forall a : A, P a -> Q a) -> (forall a : A, P a)
+      -> forall a : A, Q a.
+  Proof using. intros H1 H2 a. apply H1, H2. Qed.
+
+  Theorem all_delta : (forall a b : A, R a b) -> forall a : A, R a a.
+  Proof using. intros H a. apply H. Qed.
+End A_declared.
+
+Reset iterate.
+Fixpoint iterate {A : Set} (f : A -> A) (n : nat) (a : A) : A
+  := match n with
+     | O => a
+     | S n' => iterate f n' (f a)
+     end.
+Arguments iterate {A}.
+
+Definition my_plus : nat -> nat -> nat := iterate S.
+
+Theorem iterate_assoc {A : Set} (f : A -> A) (n : nat) (a : A)
+  : iterate f n (f a) = f (iterate f n a).
+Proof.
+  generalize dependent a.
+  induction n as [| n' IH]; intro a; try reflexivity.
+  simpl. apply IH.
+Qed.
+
+Theorem iterate_one {A : Set} (f : A -> A) (n : nat) (a : A)
+  : iterate f (S n) a = f (iterate f n a).
+Proof.
+  generalize dependent a.
+  induction n as [| n' IH]; intro a; try reflexivity.
+  simpl. apply IH.
+Qed.
+
+Theorem my_plus_correct (n m : nat) : my_plus n m = n + m.
+Proof.
+  induction n as [| n' IH]; try reflexivity.
+  simpl. rewrite <- IH.
+  unfold my_plus. simpl.
+  apply iterate_assoc.
+Qed.
+
+Definition my_mult (n m : nat) : nat := iterate (my_plus n) m 0.
+
+Theorem my_mult_zero_l (n : nat) : my_mult 0 n = 0.
+Proof.
+  induction n as [| n' IH]; try reflexivity.
+  unfold my_mult. simpl. rewrite my_plus_correct. simpl.
+  unfold my_mult in IH. exact IH.
+Qed.
+
+Theorem my_mult_zero_r (n : nat) : my_mult n 0 = 0.
+Proof. unfold my_mult. reflexivity. Qed.
+
+Theorem my_mult_Sn_r (n m : nat) : my_mult n (S m) = n + my_mult n m.
+Proof.
+  unfold my_mult. simpl.
+  rewrite iterate_assoc, my_plus_correct. reflexivity.
+Qed.
+
+Theorem my_mult_Sn_l (n m : nat) : my_mult (S n) m = m + my_mult n m.
+Proof.
+  generalize dependent n.
+  induction m as [| m' IH]; intro n.
+  - repeat rewrite my_mult_zero_r. reflexivity.
+  - repeat rewrite my_mult_Sn_r. rewrite IH. ring.
+Qed.
+
+Theorem my_mult_correct (n m : nat) : my_mult n m = n * m.
+Proof.
+  induction n as [| n' IH].
+  - now rewrite my_mult_zero_l.
+  - rewrite my_mult_Sn_l, IH. reflexivity.
+Qed.
+
+Definition my_expt (n m : nat) : nat := iterate (my_mult n) m 1.
+
+Theorem my_expt_zero_l (m : nat) : my_expt 0 (S m) = 0.
+Proof.
+  induction m as [| m' IH]; try reflexivity.
+  unfold my_expt in *. simpl in *.
+  repeat rewrite my_mult_correct in *. simpl in *.
+  exact IH.
+Qed.
+
+Theorem my_expt_zero_r (n : nat) : my_expt n 0 = 1.
+Proof. unfold my_expt. reflexivity. Qed.
+
+Theorem my_expt_Sn_r (n m : nat) : my_expt n (S m) = n * my_expt n m.
+Proof.
+  unfold my_expt. simpl.
+  rewrite iterate_assoc, my_mult_correct. reflexivity.
+Qed.
+
+Theorem my_expt_correct (n m : nat) : my_expt n m = n ^ m.
+Proof.
+  induction m as [| m' IH].
+  - rewrite my_expt_zero_r. reflexivity.
+  - rewrite my_expt_Sn_r, IH. reflexivity.
+Qed.
+
+Definition ackermann (m : nat) : nat -> nat
+  := let g := fun (f : nat -> nat) (p : nat) => iterate f (S p) 1
+     in iterate g m S.
+
+Compute (ackermann 0 3). (* = 4 : nat *)
+
+Theorem ack1 (n : nat) : ackermann 0 n = n + 1.
+Proof. unfold ackermann. simpl. ring. Qed.
+
+Theorem ack2 (m : nat) : ackermann (S m) 0 = ackermann m 1.
+Proof. unfold ackermann. rewrite iterate_one. reflexivity. Qed.
+
+Theorem ack3 (m n : nat)
+  : ackermann (S m) (S n) = ackermann m (ackermann (S m) n).
+Proof.
+  unfold ackermann. rewrite iterate_one.
+  simpl. rewrite iterate_assoc. reflexivity.
+Qed.
+
+(* Excercise 4.4
+   For each of the following spécifications,
+   check that its type has sort Type, then give some function
+   which realizes this specification *)
+Definition id : forall A : Set, A -> A := fun (A : Set) (a : A) => a.
+
+Definition id' : forall A : Set, A -> A.
+  intros A a. exact a.
+Defined.
+
+Print id'.
+(* id' = fun (A : Set) (a : A) => a
+       : forall A : Set, A -> A *)
+
+Definition diag : forall A B : Set, (A -> A -> B) -> A -> B
+  := fun (A B : Set) (f : A -> A -> B) (a : A)
+     => f a a.
+
+Definition diag' : forall A B : Set, (A -> A -> B) -> A -> B.
+  intros A B f a. apply f; assumption.
+Defined.
+
+Print diag'.
+(* diag' = [fun A B f a => f a a]
+   fun (A B : Set) (f : A -> A -> B) (a : A) => f a a
+   : forall A B : Set, (A -> A -> B) -> A -> B *)
+
+Definition permute : forall A B C : Set, (A -> B -> C) -> B -> A -> C
+  := fun (A B C : Set) (f : A -> B -> C) (b : B) (a : A)
+     => f a b.
+
+Definition permute' : forall A B C : Set, (A -> B -> C) -> B -> A -> C.
+  intros A B C f b a. auto.
+Defined.
+
+Print permute'.
+(* permute' = [fun (A B C) f b a => f a b]
+   fun (A B C : Set) (f : A -> B -> C) (b : B) (a : A) => f a b
+   : forall A B C : Set, (A -> B -> C) -> B -> A -> C *)
+
+Definition f_nat_Z : forall A : Set, (nat -> A) -> Z -> A
+  := fun (A : Set) (f : nat -> A) (z : Z) => f (Z.to_nat z).
+
+Definition f_nat_Z' : forall A : Set, (nat -> A) -> Z -> A.
+  intros A f z. auto using Z.to_nat.
+Defined.
+
+Print f_nat_Z'.
+(* f_nat_Z' = [fun Z f z => f (Z.to_nat z)]
+   fun (A : Set) (f : nat -> A) (z : Z) => f (Z.to_nat z)
+   : forall A : Set, (nat -> A) -> Z -> A *)
+
+(* Excercise 4.5
+   Replace auto with basic tactics : intros, apply and assumption*)
+Lemma all_perm : forall (A : Type) (P : A -> A -> Prop),
+    (forall x y : A, P x y) -> forall x y : A, P y x.
+Proof.
+  intros A P H x y. apply H.
+Qed.
+
+Lemma resolution : forall (A : Type) (P Q R S : A -> Prop),
+    (forall a : A, Q a -> R a -> S a)
+    -> (forall b : A, P b -> Q b)
+    -> forall c : A, P c -> R c -> S c.
+Proof.
+  intros A P Q R S H1 H2 c HPc HRc.
+  (* apply H1; [apply H2 | idtac]; assumption. *)
+  (* apply H1; try apply H2; assumption. *)
+  apply H1; try assumption.
+  apply H2. assumption.
+Qed.
+
