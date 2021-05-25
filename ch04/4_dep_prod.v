@@ -450,3 +450,169 @@ Proof.
   apply H2. assumption.
 Qed.
 
+Theorem ThirtySix : 9 * 4 = 6 * 6.
+Proof. exact (refl_equal 36). Qed.
+
+Check eq_ind.
+(* eq_ind : forall (A : Type) (x : A) (P : A -> Prop),
+              P x -> forall y : A, x = y -> P y *)
+
+Definition eq_sym (A : Type) (x y : A) (h : x = y) : y = x
+  := eq_ind x (fun z => z = x) (refl_equal x) y h.
+
+Check eq_sym.
+(* eq_sym : forall (A : Type) (x y : A), x = y -> y = x *)
+
+Check (eq_sym _ _ _ ThirtySix).
+(* eq_sym nat (9 * 4) (6 * 6) ThirtySix
+   : 6 * 6 = 9 * 4 *)
+
+Check list : Type -> Type.
+Check prod : Type -> Type -> Type.
+
+Check (forall P : Prop, P -> P) : Prop.
+Check (fun P : Prop => P -> P) : Prop -> Prop.
+
+Check and : Prop -> Prop -> Prop.
+Check (forall P Q : Prop, P /\ Q) : Prop.
+
+Print not.
+(* not = fun A : Prop => A -> False
+   : Prop -> Prop *)
+
+(* introduce 'and' and 'or' *)
+Check conj.
+(* conj : forall A B : Prop, A -> B -> A /\ B *)
+Check (forall A B : Prop, A -> B -> A /\ B) : Prop.
+Check or_introl.
+(* or_introl : forall A B : Prop, A -> A \/ B *)
+Check or_intror.
+(* or_intror : forall A B : Prop, B -> A \/ B *)
+
+(* eliminate 'and' and 'or' *)
+Check and_ind.
+(* and_ind : forall A B P : Prop, (A -> B -> P) -> A /\ B -> P *)
+
+Theorem conj3 (P Q R : Prop) : P -> Q -> R -> P /\ Q /\ R.
+Proof.
+  exact (fun p q r => conj p (conj q r)).
+Qed.
+
+Theorem conj3' (P Q R : Prop) : P -> Q -> R -> P /\ Q /\ R.
+Proof.
+  intros p q r. repeat split; assumption.
+Qed.
+Print conj3'.
+(* conj3' = [fun (P Q R) p q r => conj p (conj q r)]
+   fun (P Q R : Prop) (p : P) (q : Q) (r : R) => conj p (conj q r)
+   : forall P Q R : Prop, P -> Q -> R -> P /\ Q /\ R *)
+
+Theorem disj4_3 (P Q R S : Prop) : R -> P \/ Q \/ R \/ S.
+Proof.
+  exact (fun r => or_intror _ (or_intror _ (or_introl _ r))).
+Qed.
+
+Unset Printing Notations.
+Check (forall P Q R S : Prop, R -> P \/ Q \/ R \/ S).
+(* forall (P Q R S : Prop) (_ : R), or P (or Q (or R S)) : Prop *)
+Set Printing Notations.
+
+Print Implicit or_introl.
+(* or_introl : forall [A B : Prop], A -> A \/ B
+   When applied to no more than 1 argument: Arguments A, B are implicit
+   When applied to 2 arguments: Argument A is implicit *)
+
+Print Implicit or_intror.
+(* or_intror : forall [A B : Prop], B -> A \/ B
+   When applied to no more than 1 argument: Arguments A, B are implicit
+   When applied to 2 arguments: Argument B is implicit *)
+
+Theorem disj4_3' (P Q R S : Prop) : R -> P \/ Q \/ R \/ S.
+Proof.
+  intro r. right. right. left. assumption.
+Qed.
+Print disj4_3'.
+(* disj4_3' =
+   fun (P Q R S : Prop) (r : R) => or_intror (or_intror (or_introl r))
+   : forall P Q R S : Prop, R -> P \/ Q \/ R \/ S *)
+
+Theorem disj3_3 (P Q R : Prop) : R -> P \/ Q \/ R.
+Proof.
+  exact (fun r => or_intror _ (or_intror (A := Q) (B := R) r)).
+Qed.
+
+Theorem disj3_3' (P Q R : Prop) : R -> P \/ Q \/ R.
+Proof.
+  intro r. right. right. assumption.
+Qed.
+Print disj3_3'.
+(* disj3_3' =
+   fun (P Q R : Prop) (r : R) => or_intror (or_intror r)
+   : forall P Q R : Prop, R -> P \/ Q \/ R *)
+
+Theorem disj3_3'' (P Q R : Prop) : R -> P \/ Q \/ R.
+Proof.
+  exact (fun r => or_intror P (B := Q \/ R)
+                            (or_intror Q (B := R) r)).
+Qed.
+
+Theorem disj3_3''' (P Q R : Prop) : R -> P \/ Q \/ R.
+Proof.
+  exact (fun r => or_intror P (or_intror Q r)).
+Qed.
+
+Theorem disj4_3'' (P Q R S : Prop) : R -> P \/ Q \/ R \/ S.
+Proof.
+  exact (fun r => or_intror P (or_intror Q (or_introl S r))).
+Qed.
+
+Print Implicit and_ind.
+(* and_ind : forall [A B P : Prop], (A -> B -> P) -> A /\ B -> P
+   Arguments A, B, P are implicit *)
+
+Theorem proj1' (A B : Prop) : A /\ B -> A.
+Proof.
+  exact (fun H => and_ind (fun a b => a) H).
+Qed.
+
+Theorem proj1'' (A B : Prop) : A /\ B -> A.
+Proof. intros [a b]. exact a. Qed.
+Print proj1''.
+(* proj1'' =
+   fun (A B : Prop) (H : A /\ B) => match H with
+   | conj a _ => a
+   end
+   : forall A B : Prop, A /\ B -> A *)
+
+Check ex.
+(* ex : forall A : Type, (A -> Prop) -> Prop *)
+Check ex_intro.
+(* ex_intro : forall (A : Type) (P : A -> Prop) (x : A),
+                P x -> exists y, P y *)
+
+Locate "exists".
+(* Notation "'exists' x .. y , p" := (ex (fun x => .. (ex (fun y => p)) ..))
+   : type_scope (default interpretation) *)
+
+(* So [exists y, P y] is [ex (fun y => P y)] *)
+(* ex_intro : forall (A : Type) (P : A -> Prop) (x : A),
+                P x -> ex (fun y => P y) *)
+
+Check (exists z : Z, z*z <= 37 < (z + 1)*(z + 1))%Z : Prop.
+
+Check ex_ind.
+(* ex_ind
+   : forall (A : Type) (P : A -> Prop) (P0 : Prop),
+   (forall x : A, P x -> P0) -> (exists y, P y) -> P0 *)
+
+Require Import List.
+
+Check (list Z -> nat).
+(* list Z -> nat : Set *)
+
+Unset Printing Notations.
+Check (list Z -> nat).
+(* forall _ : list Z, nat : Set *)
+Set Printing Notations.
+
+Check (cons Z.abs_nat nil) : list (Z -> nat).
