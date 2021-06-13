@@ -106,3 +106,55 @@ Proof.
  rewrite H. ring.
 Qed.
 
+(* 5.2 Logical Connectives *)
+Check conj.
+(* conj : forall A B : Prop, A -> B -> A /\ B *)
+
+Print and.
+(* Inductive and (A B : Prop) : Prop :=  conj : A -> B -> A /\ B *)
+
+Check and_ind.
+(* and_ind : forall A B P : Prop, (A -> B -> P) -> A /\ B -> P *)
+
+Print or.
+(* Inductive or (A B : Prop) : Prop
+   := or_introl : A -> A \/ B | or_intror : B -> A \/ B *)
+
+Check or_ind.
+(* or_ind : forall A B P : Prop,
+   (A -> P) -> (B -> P) -> A \/ B -> P *)
+
+Open Scope nat_scope.
+Print nat.
+(* Inductive nat : Set :=  O : nat | S : nat -> nat *)
+
+Check nat_ind.
+(* nat_ind : forall P : nat -> Prop,
+   P 0 -> (forall n : nat, P n -> P (S n))
+   -> forall n : nat, P n *)
+
+Check False_ind.
+(* False_ind : forall P : Prop, False -> P *)
+
+Section ex_falso_quodlibet.
+  Hypothesis ff : False.
+
+  Lemma ex1 : 220 = 284.
+  Proof using ff. apply False_ind. exact ff. Qed.
+
+  Lemma ex2 : 220 = 284.
+  Proof using ff. destruct ff. Qed.
+End ex_falso_quodlibet.
+Print ex2.
+(* ex2 =
+   fun ff : False
+     => let f : False := ff
+        in match f return (220 = 284) with
+        end
+   : False -> 220 = 284 *)
+
+
+Theorem absurd : forall P Q : Prop, P -> ~P -> Q.
+Proof.
+  intros P Q p np. elim np. assumption.
+Qed.
