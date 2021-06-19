@@ -153,8 +153,78 @@ Print ex2.
         end
    : False -> 220 = 284 *)
 
-
 Theorem absurd : forall P Q : Prop, P -> ~P -> Q.
 Proof.
   intros P Q p np. elim np. assumption.
+Qed.
+
+Theorem double_neg_i : forall P : Prop, P -> ~~P.
+Proof.
+  intros P p np. apply np, p.
+Qed.
+
+Theorem modus_ponens (P Q : Prop) : P -> (P -> Q) -> Q.
+Proof.
+  intros p pq. apply pq, p.
+Qed.
+
+Theorem double_neg_i' : forall P : Prop, P -> ~~P.
+Proof.
+  intros P p np.
+  (* apply (modus_ponens P False p np). *)
+  apply (modus_ponens P False); assumption.
+Qed.
+
+(* Exercise 5.3
+   Prove the following statements: *)
+
+(** Instance of identity on propositions *)
+Theorem not_False : ~ False.
+Proof. intro f. exact f. Qed.
+
+Definition not_False' : ~ False
+  := fun H => H.
+
+Theorem triple_neg (P : Prop): ~~~P -> ~P.
+Proof. intros tnp p. apply tnp, double_neg_i, p. Qed.
+
+Theorem P3PQ (P Q : Prop): ~~~P -> P -> Q.
+Proof.
+  intros tnp p. apply triple_neg in tnp.
+  apply (absurd P Q); assumption.
+Qed.
+
+(** instance of the transivity of -> *)
+Theorem contrap (P Q : Prop) : (P -> Q) -> ~Q -> ~P.
+Proof. intros pq nq p. apply nq, pq, p. Qed.
+
+Theorem imp_absurd (P Q R : Prop) : (P -> Q) -> (P -> ~Q) -> P -> R.
+Proof.
+  intros pq pnq p.
+  apply (absurd Q R); [apply pq | apply pnq]; exact p.
+Qed.
+
+(* Exercise 5.4
+   Usual reasoning errors rely on pseudo inference rules that can
+   lead to contradictions. These rules are often the result of some sort of dyslexia.
+   Here are two examples: implication dyslexia (confusion between P -> Q and
+   Q -> P) and dyslexic contraposition: *)
+
+Definition dyslexic_imp := forall P Q : Prop, (P -> Q) -> Q -> P.
+
+Definition dyslexic_contrap := forall P Q:Prop, (P -> Q) -> ~P -> ~Q.
+
+Theorem dyslexic_imp_false : dyslexic_imp -> False.
+Proof.
+  unfold dyslexic_imp. intros H. apply (H False True).
+  - apply False_ind.
+  - apply I.
+Qed.
+
+Theorem dyslexic_contrap_false : dyslexic_contrap -> False.
+Proof.
+  unfold dyslexic_contrap. intros H. apply (H False True).
+  - apply False_ind.
+  - intro f. exact f.
+  - exact I.
 Qed.
