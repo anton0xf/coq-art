@@ -228,3 +228,27 @@ Proof.
   - intro f. exact f.
   - exact I.
 Qed.
+
+(* *** *)
+
+Lemma and_commutes (A B : Prop) : A /\ B -> B /\ A.
+Proof.
+  intro H. elim H. split; assumption.
+Qed.
+
+Lemma and_commutes' (A B : Prop) : A /\ B -> B /\ A.
+Proof.
+  intros [a b]. apply (conj b a).
+Qed.
+
+Lemma or_commutes (A B : Prop) : A \/ B -> B \/ A.
+Proof.
+  intro H. elim H; auto.
+Qed.
+
+Lemma or_commutes' (A B : Prop) : A \/ B -> B \/ A.
+Proof.
+  intros [a | b]; [ right | left ]; assumption.
+Qed.
+
+
