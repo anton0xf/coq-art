@@ -252,3 +252,40 @@ Proof.
 Qed.
 
 
+(* Exercise 5.5
+   Prove the following theorem : *)
+Theorem abcd_c (A : Set) (a b c d : A) : a=c \/ b=c \/ c=c \/ d=c.
+Proof.
+  right. right. left. apply (eq_refl c).
+Qed.
+
+(* Exercise 5.6
+   Prove the following theorems: *)
+
+Lemma and_assoc (A B C : Prop) : A /\ (B /\ C) -> (A /\ B) /\ C.
+Proof.
+ intros [a [b c]]; repeat split; assumption.
+Qed.
+
+Lemma and_imp_dist (A B C D : Prop)
+  : (A -> B) /\ (C -> D) -> A /\ C -> B /\ D.
+Proof.
+  intros [ab cd] [a c].
+  split; [ exact (ab a) | exact (cd c) ].
+Qed.
+
+Lemma not_contrad (A : Prop) : ~(A /\ ~A).
+Proof.
+  intros [a na]. apply na, a.
+Qed.
+
+Lemma or_and_not (A B : Prop) : (A \/ B) /\ ~A -> B.
+Proof.
+  intros [[a | b] na];
+    [ apply (absurd A B) | idtac ]; assumption.
+Qed.
+
+Lemma or_and_not' (A B : Prop) : (A \/ B) /\ ~A -> B.
+Proof.
+  intros [[a | b] na]; [ contradiction | assumption ].
+Qed.
