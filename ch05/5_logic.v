@@ -289,3 +289,133 @@ Lemma or_and_not' (A B : Prop) : (A \/ B) /\ ~A -> B.
 Proof.
   intros [[a | b] na]; [ contradiction | assumption ].
 Qed.
+
+(* Exercise 5.7 *
+   Here are five statements that are often considered
+   as characterizations of classical logic.
+   Prove that these five propositions are equivalent. *)
+Definition peirce := forall P Q : Prop, ((P -> Q) -> P) -> P.
+Definition classic := forall P : Prop, ~~P -> P.
+Definition excluded_middle := forall P : Prop, P \/ ~P.
+Definition de_morgan_not_and_not := forall P Q : Prop, ~(~P /\ ~Q) -> P \/ Q.
+Definition implies_to_or := forall P Q : Prop, (P -> Q) -> (~P \/ Q).
+
+Definition impl_excluded_middle := forall P : Prop, (~P -> P) -> P.
+
+Theorem ExM_impl_Cl : excluded_middle -> classic.
+Proof.
+  unfold excluded_middle, classic. intros E P nnp.
+  destruct (E P) as [p | np]; [assumption | contradiction].
+Qed.
+
+Theorem ExM_impl_ImplToOr : excluded_middle -> implies_to_or.
+Proof.
+  unfold excluded_middle, implies_to_or.
+  intros E P Q H. destruct (E P) as [p | np].
+  - right. apply H, p.
+  - left. exact np.
+Qed.
+
+Lemma Cl_iff : classic -> forall P : Prop, P <-> ~~P.
+Proof.
+  intros Cl P. split; [apply double_neg_i | apply Cl].
+Qed.
+
+Lemma ImplToOr_iff : implies_to_or -> forall P Q : Prop,
+      (P -> Q) <-> (~P \/ Q).
+Proof.
+  intros I P Q. split.
+  - apply I.
+  - intros [np | q] p; [contradiction | assumption].
+Qed.
+
+Lemma OrToImpl (P Q : Prop) : ~P \/ Q -> P -> Q.
+Proof. intros [np | q] p; [contradiction | assumption]. Qed.
+
+Lemma de_morgan_or (A B : Prop) : ~(A \/ B) <-> ~A /\ ~B.
+Proof.
+  split.
+  - intro H.
+    split; intro H1; apply H;
+      [ left | right ]; assumption.
+  - intros [na nb] [a | b]; contradiction.
+Qed.
+
+Lemma triple_neg_iff (P : Prop): ~P <-> ~~~P.
+Proof. split; [apply double_neg_i | apply triple_neg]. Qed.
+
+Theorem ExM_impl_DMnan : excluded_middle -> de_morgan_not_and_not.
+Proof.
+  intros E P Q H. destruct (E P) as [p | np].
+  - left. assumption.
+  - destruct (E Q) as [q | nq].
+    + right. assumption.
+    + contradiction H. split; assumption.
+Qed.
+
+Theorem DMnan_impl_ExM : de_morgan_not_and_not -> excluded_middle.
+Proof.
+  intros DM P. apply (DM P (~P)).
+  intros [np nnp]. contradiction.
+Qed.
+
+Lemma double_and (P : Prop) : P <-> P /\ P.
+Proof.
+  split; intro H.
+  - split; assumption.
+  - destruct H as [H _]. assumption.
+Qed.
+
+Lemma double_or (P : Prop) : P <-> P \/ P.
+Proof.
+  split; intro H.
+  - left. assumption.
+  - destruct H as [H | H]; assumption.
+Qed.
+
+Theorem DMnan_impl_Cl : de_morgan_not_and_not -> classic.
+Proof.
+  intros DM P. pose (DM P P) as H.
+  rewrite <- double_and, <- double_or in H.
+  assumption.
+Qed.
+
+Theorem ExM_impl_Peirce : excluded_middle -> peirce.
+Proof.
+  intros EM P Q H. pose (ExM_impl_ImplToOr EM) as I.
+  rewrite (ImplToOr_iff I) in H.
+  destruct H as [H | H]; try assumption.
+  rewrite (ImplToOr_iff I) in H. rewrite de_morgan_or in H.
+  destruct H as [nnp nq].
+  apply (ExM_impl_Cl EM). assumption.
+Qed.
+
+Lemma contrap_inv : classic -> forall P Q : Prop, (~P -> ~Q) -> Q -> P.
+Proof.
+  intros Cl P Q H. rewrite (Cl_iff Cl Q), (Cl_iff Cl P).
+  apply contrap, H.
+Qed.
+
+Theorem Cl_impl_ImplToOr : classic -> implies_to_or.
+Proof.
+  intros Cl P Q. apply (contrap_inv Cl).
+  intros H H1. apply de_morgan_or in H.
+  destruct H as [p nq].
+  apply  nq, H1, Cl, p.
+Qed.
+
+Theorem ImplToOr_impl_ExM : implies_to_or -> excluded_middle.
+Proof.
+  intros I P. apply or_commutes. apply (I P P).
+  intro p. assumption.
+Qed.
+
+Theorem ImplExM_impl_ExM : impl_excluded_middle -> excluded_middle.
+Proof.
+  intros IE P. apply (IE (P \/ ~P)).
+  intros H. apply de_morgan_or in H.
+  destruct H as [np p]. contradiction.
+Qed.
+
+Theorem Peirce_impl_ImplExM : peirce -> impl_excluded_middle.
+Proof. intros Pr P. apply (Pr P False). Qed.
