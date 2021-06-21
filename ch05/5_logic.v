@@ -419,3 +419,40 @@ Qed.
 
 Theorem Peirce_impl_ImplExM : peirce -> impl_excluded_middle.
 Proof. intros Pr P. apply (Pr P False). Qed.
+
+(* 5.2.6 Existential Quantification *)
+
+Lemma ex_imp_ex (A : Type) (P Q : A -> Prop)
+  : (ex P) -> (forall x : A, P x -> Q x) -> (ex Q).
+Proof.
+  intros H H0. destruct H as [a Ha].
+  exists a. apply H0. assumption.
+Qed.
+
+(* Exercise 5.9
+   In a context where [A : Set] and [P, Q : A -> Prop] are declared,
+   prove the following statements: *)
+
+Section on_ex.
+  Variables (A : Type)
+            (P Q : A -> Prop).
+
+  Lemma ex_or : (exists x : A, P x \/ Q x) -> ex P \/ ex Q.
+  Proof using.
+    intros [x [px | qx]]; [left | right]; exists x; assumption.
+  Qed.
+
+ Lemma ex_or_R : ex P \/ ex Q -> (exists x : A, P x \/ Q x).
+ Proof using.
+   intros [[x px] | [x qx]]; exists x; [left | right]; assumption.
+ Qed.
+
+ Lemma two_is_three : (exists x : A, forall R : A -> Prop, R x) -> 2 = 3.
+ Proof using.
+   intros [x H]. apply (H (fun _ => 2 = 3)).
+ Qed.
+
+ Lemma forall_no_ex : (forall x : A, P x) -> ~(exists y : A, ~ P y).
+ Proof using. intros H [y npy]. apply npy, (H y). Qed.
+
+End on_ex.
