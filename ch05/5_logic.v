@@ -541,3 +541,15 @@ Proof.
   intros H H0. assert (n = 2) by lia. now subst n.
 Qed.
 
+(* Exercise 5.11
+   Prove the following theorem, first by a direct use of eq_ind,
+   then with the rewri t e tactic: *)
+Theorem eq_trans (A : Type) (a b c : A) : a = b -> b = c -> a = c.
+Proof.
+  intros H1 H2.
+  apply eq_ind with (P := fun t => a = t) (x := b); assumption.
+Qed.
+
+Theorem eq_trans' (A : Type) (a b c : A) : a = b -> b = c -> a = c.
+Proof. intros H1 H2. rewrite H1, H2. reflexivity. Qed.
+
