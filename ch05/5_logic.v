@@ -456,3 +456,88 @@ Section on_ex.
  Proof using. intros H [y npy]. apply npy, (H y). Qed.
 
 End on_ex.
+
+(* 5.3 Equality and Rewriting *)
+
+Lemma L36 : 6 * 6 = 9 * 4.
+Proof. reflexivity. Qed.
+
+Print L36. (* L36 = eq_refl : 6 * 6 = 9 * 4 *)
+
+Lemma diff_of_squares (a b : Z) : ((a + b) * (a - b) = a * a - b * b)%Z.
+Proof.
+  (* reflexivity. *)
+  (* Error: In environment a, b : Z
+     Unable to unify "(a * a - b * b)%Z" with "((a + b) * (a - b))%Z". *)
+  ring. (* auto with zarith. *)
+Qed.
+
+Theorem eq_sym' (A : Type) (a b : A) : a = b -> b = a.
+Proof.
+  intros e. rewrite e. reflexivity.
+Qed.
+
+Theorem eq_sym'' (A : Type) (a b : A) : a = b -> b = a.
+Proof.
+  intros e. destruct e. apply eq_refl.
+Qed.
+
+Open Scope Z_scope.
+
+Lemma Zmult_distr1 (n x : Z) : n*x + x = (n + 1) * x.
+Proof.
+ rewrite Zmult_plus_distr_l.
+ now rewrite Zmult_1_l.
+Qed.
+
+Lemma regroup (x : Z) : x + x + x + x + x = 5 * x.
+Proof.
+  pattern x at 1.
+  rewrite <- Zmult_1_l.
+  repeat rewrite Zmult_distr1.
+  reflexivity.
+Qed.
+
+(* Exercise 5.10 Prove the following statement: *)
+Open Scope nat_scope.
+Theorem plus_permute2 (n m p : nat) : n + m + p = n + p + m.
+Proof.
+  rewrite <- plus_assoc.
+  pattern (m + p). rewrite plus_comm.
+  now rewrite plus_assoc.
+Qed.
+
+(* 5.3.4 * Conditional Rewriting *)
+Theorem le_lt_S_eq (n p : nat) : n <= p -> p < S n -> n = p.
+Proof. omega. Qed.
+
+Theorem le_lt_S_eq' (n p : nat) : n <= p -> p < S n -> n = p.
+Proof.
+  generalize dependent p.
+  induction n as [| n' IH]; intros p H1 H2.
+  - unfold lt in H2. apply le_S_n in H2.
+    apply Nat.le_antisymm; assumption.
+  - destruct p as [| p'].
+    + contradict H1. apply Nat.nle_succ_0.
+    + apply eq_S. apply le_S_n in H1. apply lt_S_n in H2.
+      apply IH; assumption.
+Qed.
+
+Lemma conditional_rewrite_example (n : nat)
+  : 8 <= n + 6 -> 3 + n < 6 -> n * n = n + n.
+Proof.
+  intros H H0.
+  rewrite <- (le_lt_S_eq 2 n).
+  - reflexivity.
+  - apply Nat.add_le_mono_r with (p := 6). assumption.
+  - apply plus_lt_reg_l with (p:= 3). assumption.
+Qed.
+
+(** A shorter proof ... *)
+Require Import Lia.
+Lemma conditional_rewrite_example' (n : nat)
+  : 8 <= n + 6 -> 3 + n < 6 -> n * n = n + n.
+Proof.
+  intros H H0. assert (n = 2) by lia. now subst n.
+Qed.
+
