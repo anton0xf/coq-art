@@ -553,3 +553,63 @@ Qed.
 Theorem eq_trans' (A : Type) (a b c : A) : a = b -> b = c -> a = c.
 Proof. intros H1 H2. rewrite H1, H2. reflexivity. Qed.
 
+(* 5.5 *** Impredicative Definitions *)
+
+Definition my_True : Prop
+  := forall P : Prop, P -> P.
+
+Definition my_False : Prop
+  := forall P : Prop, P.
+
+Theorem my_I : my_True.
+Proof. intros P p. assumption. Qed.
+
+Theorem my_False_ind (P : Prop) : my_False -> P.
+Proof. intro F. apply F. Qed.
+
+(* Exercise 5.12
+   Construct manually the proof terms that are used as values
+   of the constants my_I and my_False_ind. *)
+Theorem my_I' : my_True.
+Proof. exact (fun P p => p). Qed.
+
+Theorem my_False_ind' (P : Prop) : my_False -> P.
+Proof. exact (fun F => (F P)). Qed.
+
+(* Exercise 5.13 *
+   It is possible to define negation on top of our notion of falsehood: *)
+Definition my_not (P : Prop) : Prop := P -> my_False.
+
+(* Redo Exercise 5.3 using my_False and my_not instead of False and not. *)
+
+(** Instance of identity on propositions *)
+Theorem not_my_False : my_not my_False.
+Proof. intro f. exact f. Qed.
+
+Definition not_my_False' : my_not my_False
+  := fun H => H.
+
+Theorem double_my_neg_i (P : Prop) : P -> my_not (my_not P).
+Proof. intros p np. apply np, p. Qed.
+
+Theorem triple_my_neg (P : Prop): my_not (my_not (my_not P)) -> my_not P.
+Proof. intros tnp p. apply tnp, double_my_neg_i, p. Qed.
+
+Theorem my_absurd (P Q : Prop) : P -> my_not P -> Q.
+Proof. intros p np. apply my_False_ind, np, p. Qed.
+
+Theorem my_P3PQ (P Q : Prop): my_not (my_not (my_not P)) -> P -> Q.
+Proof.
+  intros tnp p. apply triple_my_neg in tnp.
+  apply (my_absurd P Q); assumption.
+Qed.
+
+(** instance of the transivity of -> *)
+Theorem my_contrap (P Q : Prop) : (P -> Q) -> my_not Q -> my_not P.
+Proof. intros pq nq p. apply nq, pq, p. Qed.
+
+Theorem imp_my_absurd (P Q R : Prop) : (P -> Q) -> (P -> my_not Q) -> P -> R.
+Proof.
+  intros pq pnq p.
+  apply (my_absurd Q R); [apply pq | apply pnq]; exact p.
+Qed.
