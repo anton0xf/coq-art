@@ -613,3 +613,44 @@ Proof.
   intros pq pnq p.
   apply (my_absurd Q R); [apply pq | apply pnq]; exact p.
 Qed.
+
+(* 5.5.3 Leibniz Equality *)
+Require Import Relations.
+Section leibniz.
+ Variable A : Type.
+ Definition leibniz (a b : A) : Prop
+   := forall P : A -> Prop, P a -> P b.
+
+ Theorem leibniz_sym : symmetric A leibniz.
+ Proof using.
+   intros x y H Q. now apply H.
+   (* apply (H (fun t => Q t -> Q x)). trivial. *)
+ Qed.
+
+ (* Exercise 5.14 ** Prove the following statements: *)
+ Theorem leibniz_refl : reflexive A leibniz.
+ Proof using. intros x P H. exact H. Qed.
+
+ Theorem leibniz_trans : transitive A leibniz.
+ Proof using. intros x y z Hxy Hyz. apply Hyz, Hxy. Qed.
+
+ Theorem leibniz_equiv : equiv A leibniz.
+ Proof using.
+   unfold equiv.
+   auto using leibniz_refl, leibniz_trans, leibniz_sym.
+ Qed.
+
+ Theorem leibniz_least (R : relation A)
+   : reflexive A R -> inclusion A leibniz R.
+ Proof using. intros refl x y eq. apply eq, refl. Qed.
+
+ Theorem leibniz_eq (a b : A) : leibniz a b -> a = b.
+ Proof using. intro eq. apply eq. reflexivity. Qed.
+
+ Theorem eq_leibniz (a b : A) : a = b -> leibniz a b.
+ Proof using. intros eq P H. rewrite <- eq. assumption. Qed.
+
+ Theorem leibniz_ind (x : A) (P : A -> Prop)
+   : P x -> forall y : A, leibniz x y -> P y.
+ Proof using. intros px y eq. apply eq, px. Qed.
+End leibniz.
