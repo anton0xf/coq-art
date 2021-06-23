@@ -654,3 +654,58 @@ Section leibniz.
    : P x -> forall y : A, leibniz x y -> P y.
  Proof using. intros px y eq. apply eq, px. Qed.
 End leibniz.
+
+(* 5.5.4 Some Other Connectives and Quantifiers *)
+
+Definition my_and (P Q : Prop) : Prop
+  := forall R : Prop, (P -> Q -> R) -> R.
+
+Definition my_or (P Q : Prop) : Prop
+  := forall R : Prop, (P -> R) -> (Q -> R) -> R.
+
+Definition my_ex (A : Set) (P : A -> Prop) : Prop
+  := forall R : Prop, (forall x : A, P x -> R) -> R.
+
+(* Exercise 5.15 *
+   In order to feel at home with the preceding encodings,
+   prove the following statements: *)
+
+Theorem my_and_left (P Q : Prop) : my_and P Q -> P.
+Proof. intro H. apply H. intros p q. exact p. Qed.
+
+Theorem my_and_right (P Q : Prop) : my_and P Q -> Q.
+Proof. intro H. apply H. intros p q. exact q. Qed.
+
+Theorem my_and_ind (P Q R : Prop) : (P -> Q -> R) -> my_and P Q -> R.
+Proof. intros H A. apply A, H. Qed.
+
+Theorem my_or_introl (P Q : Prop) : P -> my_or P Q.
+Proof. intros p R pr qr. apply pr, p. Qed.
+
+Theorem my_or_intror (P Q : Prop) : Q -> my_or P Q.
+Proof. intros q R pr qr. apply qr, q. Qed.
+
+Theorem my_or_ind (P Q R : Prop) : (P -> R) -> (Q -> R) -> my_or P Q -> R.
+Proof. intros pr qr H. apply H; assumption. Qed.
+
+Theorem my_or_False (P : Prop) : my_or P my_False -> P.
+Proof.
+  apply my_or_ind.
+  - intro p. exact p.
+  - apply my_False_ind.
+Qed.
+
+Theorem my_or_comm (P Q : Prop) : my_or P Q -> my_or Q P.
+Proof. intros H R qr pr. apply (my_or_ind P Q R); assumption. Qed.
+
+Theorem my_ex_intro (A : Set) (P : A -> Prop) (a : A) : P a -> my_ex A P.
+Proof. intros pa R H. apply (H a), pa. Qed.
+
+Theorem my_not_ex_all (A : Set) (P : A -> Prop)
+  : my_not (my_ex A P) -> forall a : A, my_not (P a).
+Proof.
+  intros H a pa. apply H. intros R He. apply (He a), pa.
+Qed.
+
+Theorem my_ex_ex (A : Set) (P : A -> Prop) : my_ex A P -> ex P.
+Proof. intro H. apply H. intros x px. exists x. exact px. Qed.
