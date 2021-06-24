@@ -709,3 +709,17 @@ Qed.
 
 Theorem my_ex_ex (A : Set) (P : A -> Prop) : my_ex A P -> ex P.
 Proof. intro H. apply H. intros x px. exists x. exact px. Qed.
+
+(* 5.5.4.1 An Impredicative Definition of <= *)
+Definition my_le (n p : nat)
+  := forall P : nat -> Prop, P n -> (forall q : nat, P q -> P (S q)) -> P p.
+
+(* Exercise 5.16 ** Prove the following lemmas: *)
+Theorem my_le_n (n : nat) : my_le n n.
+Proof. intros P pn H. exact pn. Qed.
+
+Theorem my_le_S (n p : nat) : my_le n p -> my_le n (S p).
+Proof. intros H P pn PM. apply PM, H; assumption. Qed.
+
+Theorem my_le_le (n p : nat) : my_le n p -> n <= p.
+Proof. intro H. apply H; [apply le_n | apply le_S]. Qed.
