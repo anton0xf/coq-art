@@ -49,3 +49,35 @@ Compute (season_of_month July). (* = Summer : season *)
 Check bool_ind.
 (* bool_ind : forall P : bool -> Prop,
      P true -> P false -> forall b : bool, P b *)
+
+(* 6.1.2 Simple Reasoning and Computing *)
+Theorem month_equal (m : month)
+ : m=January \/ m=February \/ m=March \/ m=April \/ m=May \/ m=June
+   \/ m=July \/ m=August \/  m=September \/ m=October \/ m=November
+   \/ m=December.
+Proof. destruct m; auto 12. Qed.
+
+(** explicit use of month_ind: *)
+Theorem month_equal' (m : month)
+ : m=January \/ m=February \/ m=March \/ m=April
+   \/ m=May \/ m=June \/ m=July \/ m=August
+   \/ m=September \/ m=October \/ m=November \/ m=December.
+Proof. pattern m. apply month_ind; auto 12. Qed.
+
+(* Exercise 6.3 Prove in two different ways the following theorem:
+   1. Give directly a proof term, with occurences of
+      bool_ind, or_introl, or_intror and refl_equal.
+   2. Use the following tactics :
+      pattern, apply, left, right, and reflexivity. *)
+Theorem bool_cases (b : bool) : b = true \/ b = false.
+Proof.
+  exact (bool_ind (fun c => c = true \/ c = false)
+                  (or_introl eq_refl)
+                  (or_intror eq_refl) b).
+Qed.
+
+Theorem bool_cases' (b : bool) : b = true \/ b = false.
+Proof. pattern b. apply bool_ind; [left | right]; reflexivity. Qed.
+
+Theorem bool_cases'' (b : bool) : b = true \/ b = false.
+Proof. destruct b; [left | right]; reflexivity. Qed.
