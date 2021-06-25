@@ -81,3 +81,108 @@ Proof. pattern b. apply bool_ind; [left | right]; reflexivity. Qed.
 
 Theorem bool_cases'' (b : bool) : b = true \/ b = false.
 Proof. destruct b; [left | right]; reflexivity. Qed.
+
+(* 6.1.4 Pattern Matching *)
+Check (fun b : bool => match b with false => 45 | true => 33 end).
+(* fun b : bool => if b then 33 else 45 : bool -> nat *)
+
+Definition month_length (leap : bool) (m : month) : nat
+  := match m with
+     | January => 31 | February => if leap then 29 else 28
+     | March => 31   | April => 30    | May => 31  | June => 30
+     | July => 31    | August => 31   | September => 30
+     | October => 31 | November => 30 | December => 31
+     end.
+
+Definition month_length' (leap : bool)
+  := month_rec (fun _ : month => nat)
+               31 (if leap then 29 else 28)
+               31 30 31 30 31 31 30 31 30 31.
+
+Definition month_length'' (leap : bool) (m : month)
+  := match m with
+     | February => if leap then 29 else 28
+     | April  | June  | September | November => 30
+     | _  => 31
+     end.
+
+Example month_length_eq1 : month_length = month_length'.
+Proof. reflexivity. Qed.
+
+Example month_length_eq2 : month_length = month_length''.
+Proof. reflexivity. Qed.
+
+Eval compute in (fun leap => month_length leap November).
+(* = fun _ : bool => 30 : bool -> nat *)
+
+Example length_february : month_length false February = 28.
+Proof. reflexivity. Qed.
+
+(* Exercise 6.4
+   Using the type introduced for seasons in Exercise 6.1 page 139,
+   write the function that maps any month to the season
+   that contains most of its days, this time
+   using the pattern matching construct. *)
+
+Definition season_of_month' (m : month) : season
+  := match m with
+     | December | January | February => Winter
+     | March | April | May => Spring
+     | June | July | August => Summer
+     | September | October | November => Fall
+     end.
+
+Example season_of_month_eq : season_of_month = season_of_month'.
+Proof. reflexivity. Qed.
+
+(* Exercise 6.5
+   Write the function that maps every month that has an even
+   number of days to the boolean value true and the others to false. *)
+Definition is_even_days_in_month (leap : bool) (m : month)
+  := Nat.even (month_length leap m).
+
+(* Exercise 6.6
+   Define the functions associated with the following boolean connectives:
+   Notice that these functions are already defined in the standard library
+   under the names negb, orb, andb, xorb and Bool.eqb. *)
+Definition bool_not (b : bool) : bool := if b then false else true.
+Definition bool_or (a b : bool) : bool
+  := if a then true else
+       if b then true else false.
+Definition bool_and (a b : bool) : bool := if a then b else false.
+Definition bool_xor (a b : bool) : bool
+  := if a then bool_not b else b.
+Definition bool_eq (a b : bool) : bool
+  := if a then b else bool_not b.
+
+(* Prove the following theorems: *)
+Theorem bool_xor_not_eq (b1 b2 : bool)
+  : bool_xor b1 b2 = bool_not (bool_eq b1 b2).
+Proof. destruct b1, b2; reflexivity. Qed.
+
+Theorem bool_not_and (b1 b2 : bool)
+  : bool_not (bool_and b1 b2) = bool_or (bool_not b1) (bool_not b2).
+Proof. destruct b1, b2; reflexivity. Qed.
+
+Theorem bool_not_not (b : bool) : bool_not (bool_not b) = b.
+Proof. destruct b; reflexivity. Qed.
+
+Theorem bool_tex (b : bool) : bool_or b (bool_not b) = true.
+Proof. destruct b; reflexivity. Qed.
+
+Theorem bool_eq_reflect (b1 b2 : bool) : bool_eq b1 b2 = true -> b1 = b2.
+Proof.
+  destruct b1, b2; simpl; intro H;
+    try rewrite H; reflexivity.
+Qed.
+
+Theorem bool_eq_reflect2 (b1 b2 : bool) : b1 = b2 -> bool_eq b1 b2 = true.
+Proof. intro H. subst b2. destruct b1; reflexivity. Qed.
+
+Theorem bool_not_or (b1 b2 : bool)
+  : bool_not (bool_or b1 b2) = bool_and (bool_not b1) (bool_not b2).
+Proof. destruct b1, b2; reflexivity. Qed.
+
+Theorem bool_or_and_distr (b1 b2 b3 : bool)
+  : bool_or (bool_and b1 b3) (bool_and b2 b3) = bool_and (bool_or b1 b2) b3.
+Proof. destruct b1, b2, b3; reflexivity. Qed.
