@@ -186,3 +186,60 @@ Proof. destruct b1, b2; reflexivity. Qed.
 Theorem bool_or_and_distr (b1 b2 b3 : bool)
   : bool_or (bool_and b1 b3) (bool_and b2 b3) = bool_and (bool_or b1 b2) b3.
 Proof. destruct b1, b2, b3; reflexivity. Qed.
+
+(* 6.1.5 Record Types *)
+Open Scope Z_scope.
+
+Inductive plane : Set := point : Z -> Z -> plane.
+(*
+plane is defined
+plane_rect is defined
+plane_ind is defined
+plane_rec is defined
+plane_sind is defined
+*)
+
+Check point. (* point : Z -> Z -> plane *)
+Check plane_ind.
+(* plane_ind : forall P : plane -> Prop,
+   (forall z z0 : Z, P (point z z0)) -> forall p : plane, P p *)
+
+Definition abscissa (p : plane) : Z
+  := match p with point x y => x end.
+Check abscissa. (* abscissa : plane -> Z *)
+
+Reset plane. (* also reset [abscissa] *)
+
+Record plane : Set := point {abscissa : Z; ordinate : Z}.
+(*
+plane is defined
+abscissa is defined
+ordinate is defined
+*)
+Print plane.
+(* Record plane : Set := point { abscissa : Z;  ordinate : Z } *)
+Check point. (* point : Z -> Z -> plane *)
+Check abscissa. (* abscissa : plane -> Z *)
+Print abscissa.
+(* abscissa : plane -> Z
+   := fun p : plane => let (abscissa, _) := p in abscissa *)
+
+(* Exercise 6.7 What is the type of plane_rec? *)
+(* Check plane_rec. *)
+(* Error: The reference plane_rec was not found in the current environment. *)
+
+(* Exercise 6.8
+   Define a function that computes the "Manhattan" distance for
+   points of the plane (the Manhattan distance
+   is the sum of the absolute values of differences of coordinates). *)
+Definition manhattan_distance (p1 p2 : plane) : Z
+  := let (x1, y1) := p1 in
+     let (x2, y2) := p2 in
+     Z.abs (x1 - x2) + Z.abs (y1 - y2).
+
+Check (point 1 2).
+Check (point 1 (-2)).
+
+Example manhattan_distance_ex
+  : manhattan_distance (point (-1) (-2)) (point 4 2) = 9.
+Proof. reflexivity. Qed.
