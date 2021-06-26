@@ -243,3 +243,42 @@ Check (point 1 (-2)).
 Example manhattan_distance_ex
   : manhattan_distance (point (-1) (-2)) (point 4 2) = 9.
 Proof. reflexivity. Qed.
+
+(* 6.1.6 Records with Variants *)
+Inductive vehicle : Set
+  := bicycle (* [number of seats] *) : nat -> vehicle
+   | motorized (* [number of seats, number of wheels] *)
+     : nat -> nat -> vehicle.
+
+Check vehicle_ind.
+(* vehicle_ind : forall P : vehicle -> Prop,
+   (forall n : nat, P (bicycle n)) ->
+   (forall n n0 : nat, P (motorized n n0)) -> forall v : vehicle, P v *)
+
+Definition nb_seats (v : vehicle) : nat
+  := match v with
+     | bicycle n => n
+     | motorized n _ => n
+     end.
+
+Definition nb_wheels (v : vehicle) : nat
+  := match v with
+     | bicycle _ => 2
+     | motorized _ m => m
+     end.
+
+(* Exercise 6.9
+   What is the type of [vehicle_rec]? Use this function to define
+   an equivalent to [nb_seats]. *)
+Check vehicle_rec.
+(* vehicle_rec : forall P : vehicle -> Set,
+   (forall n : nat, P (bicycle n)) ->
+   (forall n n0 : nat, P (motorized n n0)) -> forall v : vehicle, P v *)
+
+Definition nb_seats' : vehicle -> nat
+  := vehicle_rec (fun _ : vehicle => nat)
+                 (fun n => n)
+                 (fun n _ => n).
+
+Example nb_seats_eq : nb_seats = nb_seats'.
+Proof. reflexivity. Qed.
