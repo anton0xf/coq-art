@@ -282,3 +282,166 @@ Definition nb_seats' : vehicle -> nat
 
 Example nb_seats_eq : nb_seats = nb_seats'.
 Proof. reflexivity. Qed.
+
+(* 6.2 Case-Based Reasoning *)
+Open Scope nat_scope.
+Theorem at_least_28 (leap : bool) (m : month)
+  : 28 <= month_length leap m.
+Proof. case m, leap; simpl; auto with arith. Qed.
+
+Theorem at_least_28' (leap : bool) (m : month)
+  : 28 <= month_length leap m.
+Proof.
+  case m, leap; simpl;
+    repeat ( try apply le_n; apply le_S ).
+Qed.
+
+Print at_least_28.
+(* at_least_28 : forall (leap : bool) (m : month), 28 <= month_length leap m
+  := fun (leap : bool) (m : month) =>
+       match m as m0 return (28 <= month_length leap m0) with
+       | January =>
+         if leap as b return (28 <= month_length b January)
+         then le_S 28 30 (le_S 28 29 (le_S 28 28 (le_n 28)))
+         else le_S 28 30 (le_S 28 29 (le_S 28 28 (le_n 28)))
+       | February =>
+         if leap as b return (28 <= month_length b February)
+         then le_S 28 28 (le_n 28)
+         else le_n 28
+       ...
+       end. *)
+
+(* 6.2.2.1 The discriminate Tactic *)
+Definition next_month (m : month)
+  := match m with
+     | January => February  | February => March | March => April
+     | April => May         | May => June       | June => July
+     | July => August       | August => September
+     | September => October | October => November
+     | November => December | December => January
+     end.
+
+Theorem next_august_then_july (m : month) : next_month m = August -> m = July.
+Proof.
+  case m; simpl; intros H;
+    (reflexivity || discriminate H).
+Qed.
+
+(* 6.2.2.2 ** The Inner Workings of discriminate *)
+Theorem not_January_eq_February : January <> February.
+Proof. discriminate. Qed.
+
+(* not using [discriminate] *)
+Theorem not_January_eq_February' : January <> February.
+Proof.
+  unfold not. intros H.
+  change ((fun m : month
+           => match m with | January => True | _ => False end)
+            February).
+  now rewrite <- H.
+Qed.
+
+(* not using [change], [rewrite] and [reflexivity] *)
+Theorem not_January_eq_February'' : January <> February.
+Proof.
+  unfold not. intros H.
+  pose (f := (fun m : month
+              => match m with
+                 | January => True
+                 | _ => False end)).
+  apply (eq_ind (f February) (fun P => P)).
+  - apply (eq_ind January f).
+    + unfold f. apply I.
+    + exact H.
+  - unfold f. apply eq_refl.
+Qed.
+
+(* Exercise 6.10
+   Define a function [is_January] that maps [January] to [True]
+   and any other month to [False], using the function [month_rect]. *)
+Definition is_January' (m : month) : Prop
+  := match m with
+     | January => True
+     | _ => False
+     end.
+
+Definition is_January : month -> Prop
+  := month_rect (fun _ => Prop)
+                True
+                False False False False False False False False
+                False False False.
+
+Example is_January_eq : is_January = is_January'.
+Proof. reflexivity. Qed.
+
+(* Try to automate applying [month_rect (fun _ => Prop) True]
+   to [False] 11 times *)
+Definition add_arg_type (A B : Type) : Type := A -> B.
+Compute ((add_arg_type Prop) ((add_arg_type Prop) nat)).
+(* = Prop -> Prop -> nat : Type *)
+
+Fixpoint iterate (A : Type) (f : A -> A) (n : nat) (a : A) : A
+  := match n with
+     | O => a
+     | S n' => iterate A f n' (f a)
+     end.
+Compute (iterate nat S 3 O). (* = 3 : nat *)
+Compute (iterate Type (add_arg_type Prop) 3 nat).
+(* = Prop -> Prop -> Prop -> nat : Type *)
+
+Definition add_n_arg_types (A B : Type) (n : nat) : Type
+  := (iterate Type (add_arg_type A) n B).
+Compute (add_n_arg_types Prop nat 3).
+(* = Prop -> Prop -> Prop -> nat : Type *)
+Compute (add_n_arg_types Prop nat 0). (* = nat : Type *)
+
+(* TODO Attempt failed *)
+(* Fixpoint repeat_arg (A B : Type) (a : A)
+         (n : nat) (f : add_n_arg_types A B n) : B
+  := match n with
+     | O => f (* The term "f" has type "add_n_arg_types A B n"
+                 while it is expected to have type "B". *)
+     | S n' => repeat_arg A B a n' (f a)
+     end. *)
+
+(* Fixpoint repeat_arg (A B : Type) (a : A)
+         (n : nat) (f : add_n_arg_types A B n) : B
+  := match n
+           return (match n with
+                   | O => add_n_arg_types A B n
+                   | S n' => add_n_arg_types A B n'
+                   end)
+     with
+     | O => f (* The term "f" has type "add_n_arg_types A B n"
+                 while it is expected to have type "add_n_arg_types A B 0". *)
+     | S n' => repeat_arg A B a n' (f a)
+     end. *)
+
+(* Exercise 6.11 *
+   Use the same technique to build a proof of [true <> false]. *)
+Theorem true_is_not_false : true <> false.
+Proof. discriminate. Qed.
+
+Theorem true_is_not_false' : true <> false.
+Proof.
+  intro H.
+  change ((fun b : bool => if b then True else False) false).
+  now rewrite <- H.
+Qed.
+
+(* Exercise 6.12
+   For the [vehicle] type (see Sect. 6.1.6), use the same technique
+   to build a proof that no [bicycle] is equal to a [motorized] vehicle. *)
+Theorem bicycle_is_not_motorized (n m : nat) : bicycle n <> motorized n m.
+Proof. discriminate. Qed.
+
+Theorem bicycle_is_not_motorized' (n m : nat) : bicycle n <> motorized n m.
+Proof.
+  intro H.
+  change ((fun v : vehicle
+           => match v with
+              | bicycle _ => False
+              | motorized _ _ => True
+              end) (bicycle n)).
+  now rewrite H.
+Qed.
