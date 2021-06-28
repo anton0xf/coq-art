@@ -445,3 +445,40 @@ Proof.
               end) (bicycle n)).
   now rewrite H.
 Qed.
+
+(* 6.2.3 Injective Constructors *)
+Theorem bicycle_eq_seats (x1 y1 : nat) : bicycle x1 = bicycle y1 -> x1 = y1.
+Proof. intro H. now injection H. Qed.
+
+(* Simulating injection (for the fun) *)
+Theorem bicycle_eq_seats' (x1 y1 : nat) : bicycle x1 = bicycle y1 -> x1 = y1.
+Proof.
+ intro H.
+ change (nb_seats (bicycle x1) = nb_seats (bicycle y1)).
+ rewrite H. reflexivity.
+Qed.
+
+(* use more primitive tactics *)
+Theorem bicycle_eq_seats'' (x1 y1 : nat) : bicycle x1 = bicycle y1 -> x1 = y1.
+Proof.
+ intro H.
+ apply (eq_ind (bicycle x1)
+               (fun v : vehicle => nb_seats (bicycle x1) = nb_seats v)
+               (eq_refl (nb_seats (bicycle x1)))
+               (bicycle y1) H).
+Qed.
+
+Section injection_example.
+  Variables A B : Set.
+  Inductive T : Set := c1 : A -> T | c2 : B -> T.
+
+  Theorem inject_c2 (x y : B) : c2 x = c2 y -> x = y.
+  Proof using. intro H. now injection H. Qed.
+
+  Theorem inject_c2' (x y : B) : c2 x = c2 y -> x = y.
+  Proof using.
+    intro H.
+    pose (fun t : T => match t with | c1 a => x | c2 b => b end) as f.
+    change (f (c2 x) = f (c2 y)).
+    rewrite H. reflexivity.
+  Qed.
