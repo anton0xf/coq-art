@@ -482,3 +482,31 @@ Section injection_example.
     change (f (c2 x) = f (c2 y)).
     rewrite H. reflexivity.
   Qed.
+End injection_example.
+
+(* 6.2.4 Inductive Types and Equality *)
+
+(* Exercise 6.13 **
+   This exercise shows a use of discriminate and underlines
+   the danger of adding axioms to the system.
+   The ''theory'' introduced here proposes a description of rational numbers
+   as fractions with a non-zero denominator. An axiom is added to
+   indicate that two rational numbers are equal as soon
+   as they satisfy a classical arithmetic condition. *)
+
+Require Import Arith.
+
+Record RatPlus : Set
+  := mkRat {top : nat; bottom : nat; bottom_condition : bottom <> 0}.
+
+Axiom eq_RatPlus : forall r1 r2 : RatPlus,
+    top r1 * bottom r2 = top r2 * bottom r1 -> r1 = r2.
+
+Theorem eq_RatPlus_imp_False : False.
+Proof.
+  pose (mkRat 1 1 (Nat.neq_succ_0 _)) as r1.
+  pose (mkRat 2 2 (Nat.neq_succ_0 _)) as r2.
+  assert (r1 = r2) as eq.
+  { apply eq_RatPlus. reflexivity. }
+  discriminate eq.
+Qed.
