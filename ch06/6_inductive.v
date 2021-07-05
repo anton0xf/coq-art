@@ -827,3 +827,111 @@ Proof. reflexivity. Qed.
 
 Example two_power3 : two_power 3 = 8.
 Proof. reflexivity. Qed.
+
+(* 6.3.4 Variations in the Form of Constructors *)
+Inductive Z_btree : Set
+  := Z_leaf : Z_btree
+   | Z_bnode : Z -> Z_btree -> Z_btree -> Z_btree.
+
+Check Z_btree_ind.
+(* Z_btree_ind : forall P : Z_btree -> Prop,
+   P Z_leaf
+   -> (forall (z : Z) (z0 : Z_btree), P z0
+      -> forall z1 : Z_btree, P z1 -> P (Z_bnode z z0 z1))
+         -> forall z : Z_btree, P z *)
+
+Print positive.
+(* Inductive positive : Set
+   := xI : positive -> positive
+    | xO : positive -> positive
+    | xH : positive *)
+
+Check positive_ind.
+(* positive_ind : forall P : positive -> Prop,
+   (forall p : positive, P p -> P (p~1))
+   -> (forall p : positive, P p -> P (p~0))
+   -> P 1 -> forall p : positive, P p *)
+
+Print Z.
+(* Inductive Z : Set
+   :=  Z0 : Z
+    | Zpos : positive -> Z
+    | Zneg : positive -> Z *)
+
+Open Scope Z_scope.
+
+Fixpoint sum_all_values (t : Z_btree) : Z
+  := match t with
+     | Z_leaf => 0
+     | Z_bnode x t1 t2 => x + sum_all_values t1 + sum_all_values t2
+     end.
+
+Example sum_all_values_ex1 : sum_all_values Z_leaf = 0.
+Proof. reflexivity. Qed.
+
+Definition zbtree3 := Z_bnode 1 Z_leaf (Z_bnode 2 Z_leaf Z_leaf).
+Example sum_all_values_ex2 : sum_all_values zbtree3 = 3.
+Proof. reflexivity. Qed.
+
+(* authors' solution *)
+Fixpoint zero_present (t : Z_btree) : bool
+  := match t with
+     | Z_leaf => false
+     | Z_bnode 0 t1 t2 => true
+     | Z_bnode _ t1 t2 => zero_present t1 || zero_present t2
+     end.
+
+Fixpoint zero_present' (t : Z_btree) : bool
+  := match t with
+     | Z_leaf => false
+     | Z_bnode x t1 t2 => (x =? 0) || zero_present' t1 || zero_present' t2
+     end.
+
+Example zero_present_ex1 : zero_present Z_leaf = false.
+Proof. reflexivity. Qed.
+
+Example zero_present_ex2 : zero_present zbtree3 = false.
+Proof. reflexivity. Qed.
+
+Definition zbtree01 := Z_bnode 0 Z_leaf Z_leaf.
+Definition zbtree02 := Z_bnode 1 zbtree3 (Z_bnode 2 zbtree01 zbtree3).
+
+Example zero_present_ex3 : zero_present zbtree01 = true.
+Proof. reflexivity. Qed.
+
+Example zero_present_ex4 : zero_present zbtree02 = true.
+Proof. reflexivity. Qed.
+
+Theorem zero_present_eq (t : Z_btree) : zero_present t = zero_present' t.
+Proof.
+  induction t as [| x t1 IH1 t2 IH2]; try reflexivity.
+  simpl. rewrite IH1, IH2.
+  destruct x as [| x_pos | x_neg]; try reflexivity.
+Qed.
+
+Fixpoint add_one (x : positive) : positive
+  := match x with
+     | xH => (xO xH)
+     | xO p => xI p
+     | xI p => xO (add_one p)
+     end.
+
+Open Scope positive_scope.
+
+Example add_one_ex1 : add_one 1 = 2.
+Proof. reflexivity. Qed.
+
+Example add_one_ex2 : add_one 2 = 3.
+Proof. reflexivity. Qed.
+
+Example add_one_ex3 : add_one 3 = 4.
+Proof. reflexivity. Qed.
+
+Example add_one_ex31 : add_one 31 = 32.
+Proof. reflexivity. Qed.
+
+Example add_one_ex32 : add_one 32 = 33.
+Proof. reflexivity. Qed.
+
+Example add_one_ex33 : add_one 33 = 34.
+Proof. reflexivity. Qed.
