@@ -631,3 +631,40 @@ Proof.
   pattern x.
   apply nat_ind; simpl; [| intros x' IH; rewrite IH]; reflexivity.
 Qed.
+
+(* 6.3.3 Recursive Programming *)
+Fixpoint mult2 (n : nat) : nat
+  := match n with
+     | 0 => 0
+     | S p => S (S (mult2 p))
+     end.
+
+Reset iterate.
+Fixpoint iterate {A : Type} (f : A -> A) (n : nat) (x : A) {struct n} : A
+  := match n with
+     | O => x
+     | S p => f (iterate f p x)
+     end.
+
+(* Tail call *)
+Fixpoint iterate' {A : Type} (f : A -> A) (n : nat) (x : A) {struct n} : A
+  := match n with
+     | O => x
+     | S p => iterate' f p (f x)
+     end.
+
+Theorem iterate'_step {A : Type} (f : A -> A) (n : nat) (x : A)
+  : iterate' f n (f x) = f (iterate' f n x).
+Proof.
+  generalize dependent x.
+  induction n as [| p IH]; try reflexivity.
+  simpl. intro x. apply IH.
+Qed.
+
+Theorem iterate_eq {A : Type} (f : A -> A) (n : nat) (x : A)
+  : iterate f n x = iterate' f n x.
+Proof.
+  induction n as [| p IH]; try reflexivity.
+  simpl. rewrite IH, iterate'_step. reflexivity.
+Qed.
+
