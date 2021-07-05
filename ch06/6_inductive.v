@@ -951,3 +951,40 @@ Proof. reflexivity. Qed.
 Unset Printing Notations.
 Check 1000. (* xO (xO (xO (xI (xO (xI (xI (xI (xI xH)))))))) : positive *)
 Set Printing Notations.
+
+(* Exercise 6.20
+   Build the function [pos_even_bool] of type [positive -> bool]
+   that returns the value [true] exactly when the argument is even. *)
+Definition pos_even_bool (x : positive) : bool
+  := match x with xO _ => true | _ => false end.
+
+Example pos_even_bool_ex1 : pos_even_bool 1 = false.
+Proof. reflexivity. Qed.
+
+Example pos_even_bool_ex2 : pos_even_bool 2 = true.
+Proof. reflexivity. Qed.
+
+Example pos_even_bool_ex3 : pos_even_bool 3 = false.
+Proof. reflexivity. Qed.
+
+Example pos_even_bool_ex24 : pos_even_bool 24 = true.
+Proof. reflexivity. Qed.
+
+Example pos_even_bool_ex31 : pos_even_bool 31 = false.
+Proof. reflexivity. Qed.
+
+Lemma xI_is_not_even (x : positive) : Nat.even (Pos.to_nat x~1) = false.
+Proof.
+  rewrite Pos2Nat.inj_xI, <- Nat.add_1_l, Nat.even_add_mul_2. reflexivity.
+Qed.
+
+Theorem pos_even_bool_correct (x : positive)
+  : pos_even_bool x = Nat.even (Pos.to_nat x).
+Proof.
+  induction x as [p IH | p IH |]; try reflexivity.
+  - rewrite Pos2Nat.inj_xI, <- Nat.add_1_l.
+    rewrite Nat.even_add_mul_2. reflexivity.
+  - rewrite Pos2Nat.inj_xO.
+    pattern (2 * Pos.to_nat p)%nat. rewrite <- Nat.add_0_l.
+    rewrite Nat.even_add_mul_2. reflexivity.
+Qed.
