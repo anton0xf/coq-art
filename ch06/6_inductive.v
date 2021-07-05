@@ -1123,3 +1123,29 @@ Fixpoint L_ev (f : L) : bool
 
 Example L_ev_ex : L_ev (L_and L_True (L_impl (L_not L_True) L_False)) = true.
 Proof. reflexivity. Qed.
+
+(* Exercise 6.24 *
+   Every strictly positive rational number can be obtained in a
+   unique manner by a succession of applications of functions N and D on the
+   number one, where N and D are defined by the following equations:
+   N(x) = 1 + x
+   D(x) = 1 / (1 + 1/x)
+   We can associate any strictly positive rational number with an element of
+   an inductive type with one constructor for one, and two other constructors
+   representing the functions N and D. Define this inductive type
+   (see the related exercise 6.44). *)
+Inductive F : Set
+  := one : F (* 1 *)
+   | n : F -> F (* 1 + f *)
+   | d : F -> F (* 1 / (1 + (1 / f)) *)
+.
+
+(* Exercise 6.25
+   Define a function [value_present] with the type
+   [value_present : Z -> Z_btree -> bool]
+   that determines whether an integer appears in a binary tree. *)
+Fixpoint value_present (z : Z) (t : Z_btree) {struct t} : bool
+  := match t with
+     | Z_leaf => false
+     | Z_bnode x t1 t2 => (x =? z)%Z || value_present z t1 || value_present z t2
+     end.
