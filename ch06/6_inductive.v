@@ -1019,6 +1019,12 @@ Proof. reflexivity. Qed.
 Example N_div2_ex21 : N_div2 21 = 10%N.
 Proof. reflexivity. Qed.
 
+Theorem N_div2_correct (z : N) : N_div2 z = (z / 2)%N.
+Proof.
+  rewrite <- N.div2_div.
+  destruct z as [| z']; reflexivity.
+Qed.
+
 Definition pos_div4 (z : positive) : Z
   := Z.of_N (N_div2 (N_div2 (Npos z))).
 
@@ -1053,4 +1059,11 @@ Theorem pos_div4_eq (z : positive) : pos_div4 z = pos_div4' z.
 Proof.
   destruct z as [p | p |]; try reflexivity;
     destruct p as [p' | p' |]; reflexivity.
+Qed.
+
+Theorem pos_div4_correct (z : positive) : pos_div4 z = Zpos z / 4.
+Proof.
+  unfold pos_div4. rewrite 2 N_div2_correct.
+  rewrite N.div_div; try discriminate. simpl.
+  rewrite N2Z.inj_div. reflexivity.
 Qed.
