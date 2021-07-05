@@ -577,3 +577,30 @@ Proof.
     try discriminate H.
   case leap, m2; simpl; auto with arith.
 Qed.
+
+(* New exercise - On partial functions
+ Complete the following development: *)
+Section partial_functions.
+  Variable P : nat -> Prop.
+  Variable f : nat -> option nat.
+
+  Hypothesis f_domain : forall n, P n <-> f n <> None.
+
+  Definition g n : option nat
+    := match f (n + 2) with
+       | None => None
+       | Some y => Some (y + 2)
+       end.
+
+  Lemma g_domain : forall n, P (n + 2) <-> g n <> None.
+  Proof using f_domain.
+    intro n. unfold g. split; intro H.
+    - cut (f (n + 2) <> None).
+      + intro H'.
+        destruct (f (n + 2)) eqn:eq; [discriminate | assumption].
+      + apply f_domain, H.
+    - apply f_domain.
+      destruct (f (n + 2)) eqn:eq; [discriminate | assumption].
+  Qed.
+
+End partial_functions.
