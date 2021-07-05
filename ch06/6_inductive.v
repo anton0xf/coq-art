@@ -510,3 +510,70 @@ Proof.
   { apply eq_RatPlus. reflexivity. }
   discriminate eq.
 Qed.
+
+Reset RatPlus.
+
+(* 6.2.5 * Guidelines for the case Tactic *)
+(* solution from authors *)
+Theorem next_march_shorter (leap : bool) (m1 m2 : month)
+  : next_month m1 = March
+    -> month_length leap m1 <= month_length leap m2.
+Proof.
+  intros H.
+  case_eq m1; intro eq; rewrite eq in H; simpl in H;
+    try discriminate H.
+  case leap, m2; simpl; auto with arith.
+Qed.
+
+(* my solution using destruct *)
+Theorem next_march_shorter1 (leap : bool) (m1 m2 : month)
+  : next_month m1 = March
+    -> month_length leap m1 <= month_length leap m2.
+Proof.
+  intros H. destruct m1; simpl in H; try discriminate H.
+  destruct leap, m2; simpl; auto with arith.
+Qed.
+
+(* my solution using [case] with delaying [into] *)
+Theorem next_march_shorter2 (leap : bool) (m1 m2 : month)
+  : next_month m1 = March
+    -> month_length leap m1 <= month_length leap m2.
+Proof.
+  case m1; simpl; intro H; try discriminate H.
+  case leap, m2; simpl; auto with arith.
+Qed.
+
+(* use generalize *)
+Theorem next_march_shorter3 (leap : bool) (m1 m2 : month)
+  : next_month m1 = March
+    -> month_length leap m1 <= month_length leap m2.
+Proof.
+  intro H. generalize H. clear H.
+  case m1; simpl; intros H; try discriminate H.
+  case leap, m2; simpl; auto with arith.
+Qed.
+
+(* introduce equality *)
+Theorem next_march_shorter4 (leap : bool) (m1 m2 : month)
+  : next_month m1 = March
+    -> month_length leap m1 <= month_length leap m2.
+Proof.
+  intro H. generalize (eq_refl m1). pattern m1 at -1.
+  case m1; intro eq; rewrite eq in H; simpl in H;
+    try discriminate H.
+  case leap, m2; simpl; auto with arith.
+Qed.
+
+(* how to define own case_eq tactic *)
+Ltac caseEq f := generalize (refl_equal f); pattern f at -1; case f.
+
+(* test it *)
+Theorem next_march_shorter5 (leap : bool) (m1 m2 : month)
+  : next_month m1 = March
+    -> month_length leap m1 <= month_length leap m2.
+Proof.
+  intros H.
+  caseEq m1; intro eq; rewrite eq in H; simpl in H;
+    try discriminate H.
+  case leap, m2; simpl; auto with arith.
+Qed.
