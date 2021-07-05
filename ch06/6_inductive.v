@@ -981,10 +981,76 @@ Qed.
 Theorem pos_even_bool_correct (x : positive)
   : pos_even_bool x = Nat.even (Pos.to_nat x).
 Proof.
-  induction x as [p IH | p IH |]; try reflexivity.
+  destruct x as [p | p |]; try reflexivity.
   - rewrite Pos2Nat.inj_xI, <- Nat.add_1_l.
     rewrite Nat.even_add_mul_2. reflexivity.
   - rewrite Pos2Nat.inj_xO.
     pattern (2 * Pos.to_nat p)%nat. rewrite <- Nat.add_0_l.
     rewrite Nat.even_add_mul_2. reflexivity.
+Qed.
+
+(* Exercise 6.21
+   Build the function [pos_div4] of type [positive -> Z]
+   that maps any number [z] to the integer part of [z/4]. *)
+Definition N_div2 (z : N) : N
+  := match z with
+     | Npos (xI p) | Npos (xO p) => Npos p
+     | _ => N0
+     end.
+
+Example N_div2_ex0 : N_div2 N0 = N0.
+Proof. reflexivity. Qed.
+
+Example N_div2_ex1 : N_div2 1 = N0.
+Proof. reflexivity. Qed.
+
+Example N_div2_ex2 : N_div2 2 = 1%N.
+Proof. reflexivity. Qed.
+
+Example N_div2_ex3 : N_div2 3 = 1%N.
+Proof. reflexivity. Qed.
+
+Example N_div2_ex4 : N_div2 4 = 2%N.
+Proof. reflexivity. Qed.
+
+Example N_div2_ex20 : N_div2 20 = 10%N.
+Proof. reflexivity. Qed.
+
+Example N_div2_ex21 : N_div2 21 = 10%N.
+Proof. reflexivity. Qed.
+
+Definition pos_div4 (z : positive) : Z
+  := Z.of_N (N_div2 (N_div2 (Npos z))).
+
+Example pos_div4_ex1 : pos_div4 1 = Z0.
+Proof. reflexivity. Qed.
+
+Example pos_div4_ex2 : pos_div4 2 = Z0.
+Proof. reflexivity. Qed.
+
+Example pos_div4_ex3 : pos_div4 3 = Z0.
+Proof. reflexivity. Qed.
+
+Example pos_div4_ex4 : pos_div4 4 = 1%Z.
+Proof. reflexivity. Qed.
+
+Example pos_div4_ex5 : pos_div4 5 = 1%Z.
+Proof. reflexivity. Qed.
+
+Example pos_div4_ex20 : pos_div4 20 = 5%Z.
+Proof. reflexivity. Qed.
+
+Example pos_div4_ex21 : pos_div4 23 = 5%Z.
+Proof. reflexivity. Qed.
+
+Definition pos_div4' (z : positive) : Z
+  := match z with
+     | xI (xI p) | xI (xO p) | xO (xI p) | xO (xO p) => Zpos p
+     | _ => Z0
+     end.
+
+Theorem pos_div4_eq (z : positive) : pos_div4 z = pos_div4' z.
+Proof.
+  destruct z as [p | p |]; try reflexivity;
+    destruct p as [p' | p' |]; reflexivity.
 Qed.
