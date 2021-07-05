@@ -1067,3 +1067,44 @@ Proof.
   rewrite N.div_div; try discriminate. simpl.
   rewrite N2Z.inj_div. reflexivity.
 Qed.
+
+(* Exercise 6.22
+   Assuming there exists a function [Pos.mul] t that describes the
+   multiplication of two [positive] representations and returns
+   a [positive] representation, use this function to build
+   a function that multiplies numbers of type [Z]
+   and returns a value of type [Z]. *)
+Definition Z_mul (x y : Z) : Z
+  := match x, y with
+     | Z0, _ | _, Z0 => Z0
+     | Zpos x', Zpos y' | Zneg x', Zneg y' => Zpos (Pos.mul x' y')
+     | Zneg x', Zpos y' | Zpos x', Zneg y' => Zneg (Pos.mul x' y')
+     end.
+
+Theorem Z_mul_correct (x y : Z) : Z_mul x y = (x * y)%Z.
+Proof. reflexivity. Qed.
+
+(* Exercise 6.23
+   Build the inductive type that represents the language of
+   propositional logic without variables: *)
+Inductive L : Set
+  := L_and : L -> L -> L
+   | L_or : L -> L -> L
+   | L_not : L -> L
+   | L_impl : L -> L -> L
+   | L_True | L_False.
+
+Check (L_and L_True (L_impl (L_not L_True) L_False)).
+
+Fixpoint L_ev (f : L) : bool
+  := match f with
+     | L_and x y => (L_ev x) && (L_ev y)
+     | L_or x y => (L_ev x) || (L_ev y)
+     | L_not x => negb (L_ev x)
+     | L_impl x y => implb (L_ev x) (L_ev y)
+     | L_True => true
+     | L_False => false
+     end.
+
+Example L_ev_ex : L_ev (L_and L_True (L_impl (L_not L_True) L_False)) = true.
+Proof. reflexivity. Qed.
