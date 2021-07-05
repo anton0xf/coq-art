@@ -604,3 +604,30 @@ Section partial_functions.
   Qed.
 
 End partial_functions.
+
+(* 6.3 Recursive Types *)
+Print nat. (* Inductive nat : Set :=  O : nat | S : nat -> nat *)
+Check plus. (* Init.Nat.add : nat -> nat -> nat *)
+Check plus_O_n. (* plus_O_n : forall n : nat, 0 + n = n *)
+Check plus_Sn_m. (* plus_Sn_m : forall n m : nat, S n + m = S (n + m) *)
+
+(* A first, detailed, proof of associativity of + *)
+(* authors' solution *)
+Theorem plus_assoc (x y z : nat) : (x + y) + z = x + (y + z).
+Proof.
+  induction x as [| x0 IH].
+  - simpl. reflexivity.
+  - simpl. rewrite IH. reflexivity.
+Qed.
+
+(* my variation *)
+Theorem plus_assoc' (x y z : nat) : (x + y) + z = x + (y + z).
+Proof.
+  induction x as [| x' IH]; simpl; [| rewrite IH]; reflexivity.
+Qed.
+
+Theorem plus_assoc'' (x y z : nat) : (x + y) + z = x + (y + z).
+Proof.
+  pattern x.
+  apply nat_ind; simpl; [| intros x' IH; rewrite IH]; reflexivity.
+Qed.
