@@ -828,6 +828,21 @@ Proof. reflexivity. Qed.
 Example two_power3 : two_power 3 = 8.
 Proof. reflexivity. Qed.
 
+Fixpoint two_power' (n : nat) : nat
+  := match n with
+     | O => 1
+     | S p => 2 * two_power' p
+     end.
+
+Lemma two_power_Sn (n : nat) : two_power (S n) = 2 * two_power n.
+Proof. reflexivity. Qed.
+
+Theorem two_power_eq (n : nat) : two_power n = two_power' n.
+Proof.
+  induction n as [| p IH]; try reflexivity.
+  rewrite two_power_Sn. simpl. now rewrite ?IH.
+Qed.
+
 (* 6.3.4 Variations in the Form of Constructors *)
 Inductive Z_btree : Set
   := Z_leaf : Z_btree
