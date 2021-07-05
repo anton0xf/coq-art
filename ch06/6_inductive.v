@@ -935,3 +935,19 @@ Proof. reflexivity. Qed.
 
 Example add_one_ex33 : add_one 33 = 34.
 Proof. reflexivity. Qed.
+
+(* Exercise 6.19
+   What is the representation in the type positive
+   for numbers 1000, 25, 512? *)
+Example pos25 : 25 = xI (xO (xO (xI xH))).
+Proof. reflexivity. Qed.
+
+Example pos512 : 512 = xO (xO (xO (xO (xO (xO (xO (xO (xO xH)))))))).
+Proof. reflexivity. Qed.
+
+Example pos1000 : 1000 = xO (xO (xO (xI (xO (xI (xI (xI (xI xH)))))))).
+Proof. reflexivity. Qed.
+
+Unset Printing Notations.
+Check 1000. (* xO (xO (xO (xI (xO (xI (xI (xI (xI xH)))))))) : positive *)
+Set Printing Notations.
