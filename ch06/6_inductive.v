@@ -632,6 +632,25 @@ Proof.
   apply nat_ind; simpl; [| intros x' IH; rewrite IH]; reflexivity.
 Qed.
 
+Theorem plus_n_O (n : nat) : n + 0 = n.
+Proof.
+  induction n as [| p IH]; try reflexivity.
+  simpl. rewrite IH. reflexivity.
+Qed.
+
+Theorem plus_n_Sm (n m : nat) : n + (S m) = S (n + m).
+Proof.
+  induction n as [| p IH]; try reflexivity.
+  simpl. rewrite IH. reflexivity.
+Qed.
+
+Theorem plus_comm (n m : nat) : n + m = m + n.
+Proof.
+  induction n as [| p IH].
+  - rewrite plus_n_O. reflexivity.
+  - simpl. rewrite IH, plus_n_Sm. reflexivity.
+Qed.
+
 (* 6.3.3 Recursive Programming *)
 Fixpoint mult2 (n : nat) : nat
   := match n with
@@ -668,3 +687,143 @@ Proof.
   simpl. rewrite IH, iterate'_step. reflexivity.
 Qed.
 
+(* Exercise 6.14
+   Reproduce the above discussion for the function mult:
+   compile a table describing convertibility
+   for simple patterns of the two arguments. *)
+Example mult_O_O : 0 * 0 = 0.
+Proof. reflexivity. Qed.
+
+Example mult_O_m (m : nat) : 0 * m = 0.
+Proof. reflexivity. Qed.
+
+Example mult_Sn_m (n m : nat) : (S n) * m = m + n * m.
+Proof. reflexivity. Qed.
+
+Theorem mult_n_O (n : nat) : n * 0 = 0.
+Proof.
+  induction n as [| p IH]; try reflexivity.
+  simpl. assumption.
+Qed.
+
+Example mult_n_Sm (n m : nat) : n * (S m) = n + n * m.
+Proof.
+  induction n as [| p IH]; try reflexivity.
+  simpl. rewrite IH. apply eq_S.
+  repeat rewrite plus_assoc.
+  pattern (m + p). rewrite plus_comm. reflexivity.
+Qed.
+
+Theorem mult_comm (n m : nat) : n * m = m * n.
+Proof.
+  induction n as [| p IH].
+  - rewrite mult_n_O. reflexivity.
+  - simpl. rewrite IH, mult_n_Sm. reflexivity.
+Qed.
+
+(* Exercise 6.15
+   Define a function of type [nat -> bool] that only returns [true]
+   for numbers smaller than 3, in other terms [S (S (S 0))] *)
+Definition smaller_than_three (n : nat) : bool
+  := match n with
+     | O | S O | S (S O) => true
+     | _ => false
+     end.
+
+Example zero_is_smaller_than_three : smaller_than_three 0 = true.
+Proof. reflexivity. Qed.
+
+Example two_is_smaller_than_three : smaller_than_three 2 = true.
+Proof. reflexivity. Qed.
+
+Example three_is_not_smaller_than_three : smaller_than_three 3 = false.
+Proof. reflexivity. Qed.
+
+Example fourty_five_is_not_smaller_than_three
+  : smaller_than_three 45 = false.
+Proof. reflexivity. Qed.
+
+Fixpoint smaller_than (n m : nat) : bool
+  := match n, m with
+     | O, O => false
+     | O, S _ => true
+     | S _, O => false
+     | S n', S m' => smaller_than n' m'
+     end.
+
+Theorem smaller_than_is_ltb (n m : nat) : smaller_than n m = (n <? m).
+Proof.
+  generalize dependent m.
+  induction n as [| n' IHn]; intro m.
+  - destruct m as [| m']; reflexivity.
+  - destruct m as [| m']; try reflexivity.
+    simpl. rewrite IHn.
+    destruct (n' <? m') eqn:H; symmetry.
+    + apply Nat.ltb_lt, lt_n_S, Nat.ltb_lt, H.
+    + apply Nat.ltb_nlt in H. apply Nat.ltb_nlt.
+      intro H'. apply H, lt_S_n, H'.
+Qed.
+
+Definition smaller_than_three' (n : nat) : bool := smaller_than n 3.
+
+Theorem smaller_than_three_eq (n : nat)
+  : smaller_than_three n = smaller_than_three' n.
+Proof.
+  unfold smaller_than_three'.
+  destruct n as [| [| [| [| p]]]]; reflexivity.
+Qed.
+
+(* Exercise 6.16
+   Define an addition function so that the principal argument is
+   second instead of first argument. *)
+Fixpoint left_add (n m : nat) {struct m} : nat
+  := match m with
+     | O => n
+     | S p => S (left_add n p)
+     end.
+
+Theorem left_add_correct (n m : nat) : left_add n m = n + m.
+Proof.
+  induction m as [| p IH].
+  - rewrite <- plus_n_O. reflexivity.
+  - rewrite <- plus_n_Sm. simpl.
+    rewrite IH. reflexivity.
+Qed.
+
+(* Exercise 6.17
+   Define a function [sum_f] that takes as arguments a number [n]
+   and a function [f] of type [nat -> Z] and returns the sum of
+   all values of [f] for the natural numbers
+   that are strictly smaller than [n] *)
+Fixpoint sum_f (n : nat) (f : nat -> Z) {struct n} : Z
+  := match n with
+     | O => 0
+     | S p => (f p) + sum_f p f
+     end.
+
+Example sum_id1 : sum_f 1 Z.of_nat = 0%Z.
+Proof. reflexivity. Qed.
+
+Example sum_id3 : sum_f 3 Z.of_nat = 3%Z.
+Proof. reflexivity. Qed.
+
+Example sum_id4 : sum_f 4 Z.of_nat = 6%Z.
+Proof. reflexivity. Qed.
+
+Require Import Program.Basics.
+
+Example sum_S4 : sum_f 4 (compose Z.of_nat S) = 10%Z.
+Proof. reflexivity. Qed.
+
+(* Exercise 6.18
+   Define [two_power : nat -> nat] so that [two_power n] is [2^n]. *)
+Definition two_power (n : nat) : nat := iterate (Nat.mul 2) n 1.
+
+Example two_power0 : two_power 0 = 1.
+Proof. reflexivity. Qed.
+
+Example two_power1 : two_power 1 = 2.
+Proof. reflexivity. Qed.
+
+Example two_power3 : two_power 3 = 8.
+Proof. reflexivity. Qed.
