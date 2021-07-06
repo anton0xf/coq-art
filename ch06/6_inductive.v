@@ -1149,3 +1149,99 @@ Fixpoint value_present (z : Z) (t : Z_btree) {struct t} : bool
      | Z_leaf => false
      | Z_bnode x t1 t2 => (x =? z)%Z || value_present z t1 || value_present z t2
      end.
+
+(* Exercise 6.26
+   Define a function [power: Z -> nat -> Z] to compute
+   the power of an integer and
+   a function [discrete_log : positive -> nat] that maps
+   any number [p] to the number [n] such that 2^n <= p < 2^(n+1). *)
+Fixpoint power (z : Z) (n : nat) {struct n} : Z
+  := match n with
+     | O => 1
+     | S p => z * power z p
+     end.
+
+Example power_ex1 : power 3 3 = 27%Z.
+Proof. reflexivity. Qed.
+
+Theorem two_power_is_power (n : nat) : Z.of_nat (two_power n) = power 2 n.
+Proof.
+  rewrite two_power_eq.
+  induction n as [| p IH]; try reflexivity.
+  cbv delta [two_power' power] beta iota.
+  fold two_power' power.
+  rewrite Nat2Z.inj_mul. rewrite IH. reflexivity.
+Qed.
+
+Theorem power_correct (z : Z) (n : nat) : power z n = Zpower_nat z n.
+Proof.
+  induction n as [| p IH]; try reflexivity.
+  simpl. rewrite IH. reflexivity.
+Qed.
+
+Fixpoint discrete_log (z : positive) : nat
+  := match z with
+     | xH => O
+     | xO p | xI p => S (discrete_log p)
+     end.
+
+Example discrete_log_ex1 : discrete_log 1 = 0%nat.
+Proof. reflexivity. Qed.
+
+Example discrete_log_ex2 : discrete_log 2 = 1%nat.
+Proof. reflexivity. Qed.
+
+Example discrete_log_ex3 : discrete_log 3 = 1%nat.
+Proof. reflexivity. Qed.
+
+Example discrete_log_ex4 : discrete_log 4 = 2%nat.
+Proof. reflexivity. Qed.
+
+Example discrete_log_ex5 : discrete_log 5 = 2%nat.
+Proof. reflexivity. Qed.
+
+Example discrete_log_ex7 : discrete_log 7 = 2%nat.
+Proof. reflexivity. Qed.
+
+Example discrete_log_ex8 : discrete_log 8 = 3%nat.
+Proof. reflexivity. Qed.
+
+Lemma pos_le_shift (x y : positive) : x <= y -> x~0 <= y~1.
+Proof.
+  intro H. unfold Pos.le, Pos.compare. simpl.
+  apply Pos.compare_cont_Lt_not_Gt. assumption.
+Qed.
+
+Lemma pos_lt_shift (y z : positive) : y < z -> y~1 < z~0.
+Proof.
+  intro H. unfold Pos.lt, Pos.compare. simpl.
+  apply Pos.compare_cont_Gt_Lt. assumption.
+Qed.
+
+Lemma pos_le_lt_shift (x y z : positive) : x <= y < z -> x~0 <= y~0 < z~0.
+Proof.
+  intros [Hle Hlt].
+  split; [unfold Pos.le | unfold Pos.lt]; unfold Pos.compare; simpl;
+    fold Pos.compare; assumption.
+Qed.
+
+Lemma pos_le_lt_shift' (x y z : positive) : x <= y < z -> x~0 <= y~1 < z~0.
+Proof.
+  intros [Hle Hlt].
+  split; [apply pos_le_shift | apply pos_lt_shift]; assumption.
+Qed.
+
+Theorem discrete_log_correct (z : positive) (n : nat)
+  : discrete_log z = n -> shift_nat n 1 <= z < shift_nat (n + 1) 1.
+Proof.
+  generalize dependent n.
+  induction z as [p IH | p IH |]; simpl; intros n H.
+  - destruct n as [| n']; try discriminate H.
+    apply Nat.succ_inj in H. simpl.
+    apply pos_le_lt_shift', IH, H.
+  - destruct n as [| n']; try discriminate H.
+    apply Nat.succ_inj in H. simpl.
+    apply pos_le_lt_shift, IH, H.
+  - subst n. simpl. unfold Pos.le, Pos.lt, Pos.compare.
+    simpl. split; [discriminate | reflexivity].
+Qed.
