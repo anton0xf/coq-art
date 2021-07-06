@@ -1245,3 +1245,86 @@ Proof.
   - subst n. simpl. unfold Pos.le, Pos.lt, Pos.compare.
     simpl. split; [discriminate | reflexivity].
 Qed.
+
+(* 6.3.5 ** Types with Functional Fields *)
+Inductive Z_fbtree : Set
+  := Z_fleaf : Z_fbtree
+   | Z_fnode : Z -> (bool -> Z_fbtree) -> Z_fbtree.
+
+Definition right_son (t : Z_btree) : Z_btree
+  := match t with
+     | Z_leaf => Z_leaf
+     | Z_bnode a t1 t2 => t2
+     end.
+
+Definition fright_son (t : Z_fbtree) : Z_fbtree
+  := match t with
+     | Z_fleaf => Z_fleaf
+     | Z_fnode a f => f false
+     end.
+
+Check Z_fbtree_ind.
+(* Z_fbtree_ind : forall P : Z_fbtree -> Prop,
+   P Z_fleaf
+   -> (forall (z : Z) (z0 : bool -> Z_fbtree),
+        (forall b : bool, P (z0 b)) -> P (Z_fnode z z0))
+   -> forall z : Z_fbtree, P z *)
+
+(* let's convert one tree to another *)
+Fixpoint Z_btree_to_fbtree (t : Z_btree) : Z_fbtree
+  := match t with
+     | Z_leaf => Z_fleaf
+     | Z_bnode z t1 t2
+       => Z_fnode z (fun b : bool => Z_btree_to_fbtree (if b then t1 else t2))
+     end.
+
+Fixpoint Z_fbtree_to_btree (t : Z_fbtree) : Z_btree
+  := match t with
+     | Z_fleaf => Z_leaf
+     | Z_fnode z f => Z_bnode z
+                              (Z_fbtree_to_btree (f true))
+                              (Z_fbtree_to_btree (f false))
+     end.
+
+(* proove that this functions are bijective *)
+Theorem Z_btree_to_fbtree_to_btree_is_id (t : Z_btree)
+  : Z_fbtree_to_btree (Z_btree_to_fbtree t) = t.
+Proof.
+  induction t as [| z t1 IH1 t2 IH2]; try reflexivity.
+  simpl. rewrite IH1, IH2. reflexivity.
+Qed.
+
+Require Import FunctionalExtensionality.
+
+Theorem Z_fbtree_to_btree_to_fbtree_is_id (t : Z_fbtree)
+  : Z_btree_to_fbtree (Z_fbtree_to_btree t) = t.
+Proof.
+  induction t as [| z f IH]; try reflexivity.
+  simpl. f_equal. extensionality b.
+  destruct b; rewrite IH; reflexivity.
+Qed.
+(* return to the book *)
+
+Fixpoint fsum_all_values (t : Z_fbtree) : Z
+  := match t with
+     | Z_fleaf => 0
+     | Z_fnode z f => z + fsum_all_values (f true) + fsum_all_values (f false)
+     end.
+
+(* Exercise 6.27
+   Define a function [fzero_present : Z_fbtree -> bool] that maps
+   any tree x to true if and only if x contains the value zero. *)
+Fixpoint fzero_present (t : Z_fbtree) : bool
+  := match t with
+     | Z_fleaf => false
+     | Z_fnode z f => (z =? 0)%Z || fzero_present (f true) || fzero_present (f false)
+     end.
+
+Definition fzero_present' (t : Z_fbtree) : bool
+  := zero_present' (Z_fbtree_to_btree t).
+
+Theorem fzero_present_eq (t : Z_fbtree) : fzero_present t = fzero_present' t.
+Proof.
+  induction t as [| z f IH]; try reflexivity.
+  unfold fzero_present'. simpl. rewrite !IH. reflexivity.
+Qed.
