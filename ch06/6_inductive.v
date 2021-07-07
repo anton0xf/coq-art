@@ -1328,3 +1328,76 @@ Proof.
   induction t as [| z f IH]; try reflexivity.
   unfold fzero_present'. simpl. rewrite !IH. reflexivity.
 Qed.
+
+(* 6.3.5.2 *** Infinitely Branching Trees *)
+Inductive Z_inf_branch_tree : Set
+  := Z_inf_leaf : Z_inf_branch_tree
+   | Z_inf_node : Z -> (nat -> Z_inf_branch_tree) -> Z_inf_branch_tree.
+
+Fixpoint n_sum_all_values (n : nat) (t : Z_inf_branch_tree) : Z
+  := match t with
+     | Z_inf_leaf => Z0
+     | Z_inf_node z f
+       => z + sum_f n (fun x : nat => n_sum_all_values n (f x))
+     end.
+
+(* Exercise 6.28 **
+   Define a function that checks whether the zero value occurs
+   in an infinitely branching tree at a node reachable only
+   by indices smaller than a number n. *)
+
+(* authors' solution (fixed) *)
+Fixpoint any_true (n : nat) (f : nat -> bool) {struct n} : bool
+  := match n with
+     | O => false
+     | S p => orb (f p) (any_true p f)
+     end.
+
+Fixpoint izero_present (n : nat) (t : Z_inf_branch_tree) {struct t} : bool
+  := match t with
+     | Z_inf_leaf => false
+     | Z_inf_node v f
+       => match v with
+          | Z0 => true
+          | _ => any_true n (fun p => izero_present n (f p))
+          end
+     end.
+
+(* My solution *)
+(* do map and reduce (foldl) in one on natural range (from 0 to n, excluding n) *)
+Fixpoint mr_range {A : Type} (n : nat) (f : nat -> A)
+         (r : A -> A -> A) (a0 : A) {struct n}
+  := match n with
+     | O => a0
+     | S n' => r (mr_range n' f r a0) (f n')
+     end.
+
+Definition sum_f' (n : nat) (f : nat -> Z) := mr_range n f Z.add Z0.
+Theorem sum_f_eq (n : nat) (f : nat -> Z) : sum_f n f = sum_f' n f.
+Proof.
+  unfold sum_f'. induction n as [| n' IH]; try reflexivity.
+  simpl. rewrite <- IH, Z.add_comm. reflexivity.
+Qed.
+
+Definition any_true' (n : nat) (f : nat -> bool) : bool := mr_range n f orb false.
+Theorem any_true_eq (n : nat) (f : nat -> bool) : any_true n f = any_true' n f.
+Proof.
+  unfold any_true'. induction n as [| n' IH]; try reflexivity.
+  simpl. rewrite <- IH, orb_comm. reflexivity.
+Qed.
+
+Fixpoint inf_zero_present (n : nat) (t : Z_inf_branch_tree) {struct t} : bool
+  := match t with
+     | Z_inf_leaf => false
+     | Z_inf_node z f => (z =? 0)%Z
+                         || mr_range n (compose (inf_zero_present n) f) orb false
+     end.
+
+Theorem inf_zero_present_eq (n : nat) (t : Z_inf_branch_tree)
+  : izero_present n t = inf_zero_present n t.
+Proof.
+  induction t as [| z f IH]; try reflexivity.
+  simpl. rewrite any_true_eq. unfold any_true', compose.
+  destruct z as [| z' | z'] eqn:H; try reflexivity;
+    simpl; f_equal; extensionality k; apply IH.
+Qed.
