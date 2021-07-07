@@ -1443,3 +1443,27 @@ Proof.
   induction n as [| n' IH]; try reflexivity.
   simpl. rewrite IH. rewrite plus_n_Sm. reflexivity.
 Qed.
+
+(* Exercise 6.32
+   The sum of the first n natural numbers is defined with the following function: *)
+Fixpoint sum_n (n : nat) : nat
+  := match n with
+     | O => O
+     | (S p) => n + sum_n p
+     end.
+(* Show that for each n, we have: [2 * (sum_n n) = n * (n+1)]. *)
+Theorem sum_n_eq (n : nat) : 2 * (sum_n n) = n * (n + 1).
+Proof.
+  induction n as [| n' IH]; try reflexivity.
+  simpl (sum_n (S n')). rewrite mult_n_Sm, Nat.mul_add_distr_l, IH.
+  ring.
+Qed.
+
+(* Exercise 6.33
+   Prove the following statement: [n <= sum_n n] *)
+Theorem sum_n_gt_n (n : nat) : n <= sum_n n.
+Proof.
+  induction n as [| n' IH]; simpl.
+  - apply Nat.le_refl.
+  - apply Peano.le_n_S, Nat.le_add_r.
+Qed.
