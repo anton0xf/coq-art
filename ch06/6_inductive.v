@@ -417,6 +417,8 @@ Compute (add_n_arg_types Prop nat 0). (* = nat : Type *)
      | S n' => repeat_arg A B a n' (f a)
      end. *)
 
+Reset iterate.
+
 (* Exercise 6.11 *
    Use the same technique to build a proof of [true <> false]. *)
 Theorem true_is_not_false : true <> false.
@@ -613,7 +615,7 @@ Check plus_Sn_m. (* plus_Sn_m : forall n m : nat, S n + m = S (n + m) *)
 
 (* A first, detailed, proof of associativity of + *)
 (* authors' solution *)
-Theorem plus_assoc (x y z : nat) : (x + y) + z = x + (y + z).
+Theorem plus_assoc (x y z : nat) : x + (y + z) = (x + y) + z.
 Proof.
   induction x as [| x0 IH].
   - simpl. reflexivity.
@@ -658,7 +660,6 @@ Fixpoint mult2 (n : nat) : nat
      | S p => S (S (mult2 p))
      end.
 
-Reset iterate.
 Fixpoint iterate {A : Type} (f : A -> A) (n : nat) (x : A) {struct n} : A
   := match n with
      | O => x
@@ -785,8 +786,8 @@ Fixpoint left_add (n m : nat) {struct m} : nat
 Theorem left_add_correct (n m : nat) : left_add n m = n + m.
 Proof.
   induction m as [| p IH].
-  - rewrite <- plus_n_O. reflexivity.
-  - rewrite <- plus_n_Sm. simpl.
+  - rewrite plus_n_O. reflexivity.
+  - rewrite plus_n_Sm. simpl.
     rewrite IH. reflexivity.
 Qed.
 
@@ -1433,4 +1434,12 @@ Proof.
   induction t as [| z f IH]; try reflexivity.
   simpl. f_equal. extensionality b.
   destruct b; rewrite IH; reflexivity.
+Qed.
+
+(* Exercise 6.31
+   Prove [forall n : nat, (mult2 n) = n + n] (see Sect. 6.3.3) *)
+Theorem mult2_to_sum (n : nat) : mult2 n = n + n.
+Proof.
+  induction n as [| n' IH]; try reflexivity.
+  simpl. rewrite IH. rewrite plus_n_Sm. reflexivity.
 Qed.
