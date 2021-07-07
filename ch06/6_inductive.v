@@ -1467,3 +1467,14 @@ Proof.
   - apply Nat.le_refl.
   - apply Peano.le_n_S, Nat.le_add_r.
 Qed.
+
+(* 6.3.7 Anonymous Recursive Functions (fix) *)
+Definition mult2' : nat -> nat
+  := fix f (n : nat) : nat
+       := match n with
+          | 0 => 0
+          | S p => S (S (f p)) end.
+
+Theorem mult2_eq (n : nat) : mult2 n = mult2' n.
+Proof. reflexivity. Qed.
+
