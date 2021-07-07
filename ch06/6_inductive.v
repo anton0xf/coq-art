@@ -1270,41 +1270,6 @@ Check Z_fbtree_ind.
         (forall b : bool, P (z0 b)) -> P (Z_fnode z z0))
    -> forall z : Z_fbtree, P z *)
 
-(* let's convert one tree to another *)
-Fixpoint Z_btree_to_fbtree (t : Z_btree) : Z_fbtree
-  := match t with
-     | Z_leaf => Z_fleaf
-     | Z_bnode z t1 t2
-       => Z_fnode z (fun b : bool => Z_btree_to_fbtree (if b then t1 else t2))
-     end.
-
-Fixpoint Z_fbtree_to_btree (t : Z_fbtree) : Z_btree
-  := match t with
-     | Z_fleaf => Z_leaf
-     | Z_fnode z f => Z_bnode z
-                              (Z_fbtree_to_btree (f true))
-                              (Z_fbtree_to_btree (f false))
-     end.
-
-(* proove that this functions are bijective *)
-Theorem Z_btree_to_fbtree_to_btree_is_id (t : Z_btree)
-  : Z_fbtree_to_btree (Z_btree_to_fbtree t) = t.
-Proof.
-  induction t as [| z t1 IH1 t2 IH2]; try reflexivity.
-  simpl. rewrite IH1, IH2. reflexivity.
-Qed.
-
-Require Import FunctionalExtensionality.
-
-Theorem Z_fbtree_to_btree_to_fbtree_is_id (t : Z_fbtree)
-  : Z_btree_to_fbtree (Z_fbtree_to_btree t) = t.
-Proof.
-  induction t as [| z f IH]; try reflexivity.
-  simpl. f_equal. extensionality b.
-  destruct b; rewrite IH; reflexivity.
-Qed.
-(* return to the book *)
-
 Fixpoint fsum_all_values (t : Z_fbtree) : Z
   := match t with
      | Z_fleaf => 0
@@ -1320,8 +1285,13 @@ Fixpoint fzero_present (t : Z_fbtree) : bool
      | Z_fnode z f => (z =? 0)%Z || fzero_present (f true) || fzero_present (f false)
      end.
 
-Definition fzero_present' (t : Z_fbtree) : bool
-  := zero_present' (Z_fbtree_to_btree t).
+Fixpoint Z_btree_from_f (t : Z_fbtree) : Z_btree
+  := match t with
+     | Z_fleaf => Z_leaf
+     | Z_fnode z f => Z_bnode z (Z_btree_from_f (f true)) (Z_btree_from_f (f false))
+     end.
+
+Definition fzero_present' (t : Z_fbtree) : bool := zero_present' (Z_btree_from_f t).
 
 Theorem fzero_present_eq (t : Z_fbtree) : fzero_present t = fzero_present' t.
 Proof.
@@ -1393,6 +1363,8 @@ Fixpoint inf_zero_present (n : nat) (t : Z_inf_branch_tree) {struct t} : bool
                          || mr_range n (compose (inf_zero_present n) f) orb false
      end.
 
+Require Import FunctionalExtensionality.
+
 Theorem inf_zero_present_eq (n : nat) (t : Z_inf_branch_tree)
   : izero_present n t = inf_zero_present n t.
 Proof.
@@ -1400,4 +1372,65 @@ Proof.
   simpl. rewrite any_true_eq. unfold any_true', compose.
   destruct z as [| z' | z'] eqn:H; try reflexivity;
     simpl; f_equal; extensionality k; apply IH.
+Qed.
+
+(* 6.3.6 Proofs on Recursive Functions *)
+
+(* Exercise 6.29
+Redo the proof of theorem [plus_n_0], using only the tactics
+[intro], [assumption], [elim], [simpl], [apply], and [reflexivity]. *)
+Open Scope nat_scope.
+Theorem plus_n_O' (n : nat) : n + 0 = n.
+Proof.
+  elim n; try reflexivity.
+  intros n' IH. simpl. apply eq_S, IH.
+Qed.
+
+Theorem plus_n_O'' (n : nat) : n + 0 = n.
+Proof.
+  elim n; try reflexivity. intros n' IH. simpl.
+  apply (eq_ind (n' + 0) (fun t => S (n' + 0) = S t)).
+  - apply eq_refl.
+  - assumption.
+Qed.
+
+(* Exercise 6.30 **
+   This exercise uses the types [Z_btree] and [Z_fbtree]
+   introduced in Sects. 6.3.4 and 6.3.5.1.
+   Define functions :
+   [f1 : Z_btree : Z_fbtree]
+   [f2 : Z_fbtree : Z_btree]
+   that establish the most natural bijection between the two types.
+
+   Prove the following theorem:
+   [Theorem f2_f1 : forall t: Z_btree, f2 (f1 t) = t.]
+
+   What is missing to prove the following statement?
+   [Theorem f1_f2 : forall t: Z_fbtree, f1 (f2 t) = t.] *)
+
+Fixpoint f1 (t : Z_btree) : Z_fbtree
+  := match t with
+     | Z_leaf => Z_fleaf
+     | Z_bnode z t1 t2 => Z_fnode z (fun b : bool => f1 (if b then t1 else t2))
+     end.
+
+Fixpoint f2 (t : Z_fbtree) : Z_btree
+  := match t with
+     | Z_fleaf => Z_leaf
+     | Z_fnode z f => Z_bnode z (f2 (f true)) (f2 (f false))
+     end.
+
+(* proove that this functions are bijective *)
+Theorem f2_f1 (t : Z_btree) : f2 (f1 t) = t.
+Proof.
+  induction t as [| z t1 IH1 t2 IH2]; try reflexivity.
+  simpl. rewrite IH1, IH2. reflexivity.
+Qed.
+
+(* use extensionality *)
+Theorem f1_f2 (t : Z_fbtree) : f1 (f2 t) = t.
+Proof.
+  induction t as [| z f IH]; try reflexivity.
+  simpl. f_equal. extensionality b.
+  destruct b; rewrite IH; reflexivity.
 Qed.
