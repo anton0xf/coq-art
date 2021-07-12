@@ -189,7 +189,6 @@ Proof. destruct b1, b2, b3; reflexivity. Qed.
 
 (* 6.1.5 Record Types *)
 Open Scope Z_scope.
-
 Inductive plane : Set := point : Z -> Z -> plane.
 (*
 plane is defined
@@ -845,6 +844,7 @@ Proof.
 Qed.
 
 (* 6.3.4 Variations in the Form of Constructors *)
+Open Scope Z_scope.
 Inductive Z_btree : Set
   := Z_leaf : Z_btree
    | Z_bnode : Z -> Z_btree -> Z_btree -> Z_btree.
@@ -873,8 +873,6 @@ Print Z.
    :=  Z0 : Z
     | Zpos : positive -> Z
     | Zneg : positive -> Z *)
-
-Open Scope Z_scope.
 
 Fixpoint sum_all_values (t : Z_btree) : Z
   := match t with
@@ -925,14 +923,14 @@ Proof.
   destruct x as [| x_pos | x_neg]; try reflexivity.
 Qed.
 
+Open Scope positive_scope.
+
 Fixpoint add_one (x : positive) : positive
   := match x with
      | xH => (xO xH)
      | xO p => xI p
      | xI p => xO (add_one p)
      end.
-
-Open Scope positive_scope.
 
 Example add_one_ex1 : add_one 1 = 2.
 Proof. reflexivity. Qed.
@@ -1478,3 +1476,190 @@ Definition mult2' : nat -> nat
 Theorem mult2_eq (n : nat) : mult2 n = mult2' n.
 Proof. reflexivity. Qed.
 
+(* 6.4 Polymorphic Types *)
+(* 6.4.1 Polymorphic Lists *)
+Require Import List.
+Print list.
+(* Inductive list (A : Type) : Type
+   := nil : list A
+    | cons : A -> list A -> list A *)
+
+Check list_ind.
+(* list_ind : forall (A : Type) (P : list A -> Prop),
+                P nil
+                -> (forall (a : A) (l : list A), P l -> P (a :: l))
+                -> forall l : list A, P l *)
+
+Fixpoint app {A : Type} (l m : list A) : list A
+  := match l with
+     | nil => m
+     | cons a l1 => cons a (app l1 m)
+     end.
+
+(* Exercise 6.34
+   Build a polymorphic function that takes a list as argument
+   and returns a list containing the first two elements when they exist. *)
+Definition first_two {X : Type} (xs : list X) : list X
+  := match xs with
+     | x1 :: x2 :: _ => x1 :: x2 :: nil
+     | x1 :: nil => x1 :: nil
+     | nil => nil
+     end.
+
+Example first_two_ex0 : first_two (X := nat) nil = nil.
+Proof. reflexivity. Qed.
+
+Example first_two_ex1 : first_two (1 :: nil) = (1 :: nil).
+Proof. reflexivity. Qed.
+
+Example first_two_ex2 : first_two (1 :: 2 :: nil) = (1 :: 2 :: nil).
+Proof. reflexivity. Qed.
+
+Example first_two_ex3 : first_two (1 :: 2 :: 3 :: nil) = (1 :: 2 :: nil).
+Proof. reflexivity. Qed.
+
+(* Exercise 6.35
+   Build a function that takes a natural number [n] and a list as
+   arguments and returns the list containing the first n elements
+   of the list when they exist. *)
+Fixpoint first_n {X : Type} (xs : list X) (n : nat) : list X
+  := match n, xs with
+     | O, _ | _, nil => nil
+     | S n', x1 :: xs1  => x1 :: first_n xs1 n'
+     end.
+
+Example first_n_ex : first_n (1 :: 2 :: 3 :: 4 :: nil) 3 = (1 :: 2 :: 3 :: nil).
+Proof. reflexivity. Qed.
+
+Theorem first_two_is_first_n {X : Type} (xs : list X) : first_two xs = first_n xs 2.
+Proof.
+  destruct xs as [| x1 [| x2 [| x3 xs3]]]; reflexivity.
+Qed.
+
+(* Exercise 6.36
+   Build a function that takes a list of integers as argument and
+   returns the sum of these numbers. *)
+Open Scope Z_scope.
+Fixpoint list_sum (xs : list Z) : Z
+  := match xs with
+     | nil => Z0
+     | x1 :: xs1 => x1 + list_sum xs1
+     end.
+
+Theorem list_sum_step (x : Z) (xs : list Z) : list_sum (x :: xs) = x + list_sum xs.
+Proof. reflexivity. Qed.
+
+Example list_sum_ex : list_sum (1 :: 2 :: 3 :: nil) = 6.
+Proof. reflexivity. Qed.
+
+(* Exercise 6.37
+   Build a function that takes a natural number n as argument
+   and builds a list containing n occurrences of the number one. *)
+Fixpoint list_repeat_one (n : nat) : list Z
+  := match n with
+     | O => nil
+     | S n' => 1 :: list_repeat_one n'
+     end.
+
+Fixpoint list_repeat {X : Type} (x : X) (n : nat) : list X
+  := match n with
+     | O => nil
+     | S n' => x :: list_repeat x n'
+     end.
+
+Theorem list_repeat_one_correct (n : nat) : list_repeat_one n = list_repeat 1 n.
+Proof.
+  induction n as [| n' IH]; try reflexivity.
+  simpl. rewrite IH. reflexivity.
+Qed.
+
+Example sum_of_repeat_one (n : nat) : list_sum (list_repeat_one n) = Z.of_nat n.
+Proof.
+  induction n as [| n' IH]; try reflexivity.
+  simpl list_repeat_one. rewrite list_sum_step, Nat2Z.inj_succ.
+  unfold Z.succ. rewrite Z.add_comm, IH. reflexivity.
+Qed.
+
+(* Exercise 6.38
+   Build a function that takes a number n and returns the list
+   containing the integers from 1 to n, in this order. *)
+Open Scope nat_scope.
+Fixpoint list_from_k (k n : nat) : list nat
+  := match n with
+     | O => nil
+     | S n' => k :: list_from_k (S k) n'
+     end.
+
+Example list_from_k_ex3 : list_from_k 2 2 = 2 :: 3 :: nil.
+Proof. reflexivity. Qed.
+
+Definition list_from_one_to_n (n : nat) : list nat := list_from_k 1 n.
+
+Example list_from_one_to_n_ex0 : list_from_one_to_n 0 = nil.
+Proof. reflexivity. Qed.
+
+Example list_from_one_to_n_ex1 : list_from_one_to_n 1 = 1 :: nil.
+Proof. reflexivity. Qed.
+
+Example list_from_one_to_n_ex2 : list_from_one_to_n 2 = 1 :: 2 :: nil.
+Proof. reflexivity. Qed.
+
+Example list_from_one_to_n_ex3 : list_from_one_to_n 3 = 1 :: 2 :: 3 :: nil.
+Proof. reflexivity. Qed.
+
+(* authors' solution *)
+Fixpoint iota_iter (n : nat) (ns : list nat) {struct n} : list nat
+  := match n with
+     | 0 => ns
+     | S n' => iota_iter n' (n :: ns)
+     end.
+
+Definition iota (n : nat) : list nat := iota_iter n nil.
+
+Example iota_ex0 : iota 0 = nil.
+Proof. reflexivity. Qed.
+
+Example iota_ex1 : iota 1 = 1 :: nil.
+Proof. reflexivity. Qed.
+
+Example iota_ex2 : iota 2 = 1 :: 2 :: nil.
+Proof. reflexivity. Qed.
+
+Example iota_ex3 : iota 3 = 1 :: 2 :: 3 :: nil.
+Proof. reflexivity. Qed.
+
+Theorem iota_iter_to_list_from_k1 (k n : nat) : iota_iter k (list_from_k (S k) n) = list_from_k 1 (k + n).
+Proof.
+  generalize dependent n.
+  induction k as [| k' IH]; try reflexivity.
+  intro n. simpl iota_iter.
+  replace ((S k') :: list_from_k (S (S k')) n)
+    with (list_from_k (S k') (S n)) by reflexivity.
+  rewrite IH. rewrite Nat.add_succ_r, Nat.add_succ_l.
+  reflexivity.
+Qed.
+
+Require Import Lia.
+
+Theorem iota_is_list_from_one_to_n (n : nat) : list_from_one_to_n n = iota n.
+Proof.
+  destruct n as [| n']; try reflexivity.
+  unfold iota. simpl.
+  replace (S n' :: nil) with (list_from_k (S n') 1) by reflexivity.
+  rewrite iota_iter_to_list_from_k1.
+  unfold list_from_one_to_n.
+  now rewrite Nat.add_1_r.
+Qed.
+
+Theorem iota_iter_to_list_from_k2 (k n : nat) : iota_iter k (list_from_k (S k) n) = iota_iter (k + n) nil.
+Proof.
+  generalize dependent n.
+  induction k as [| k' IH]; intro n.
+  - simpl. fold (list_from_one_to_n n). fold (iota n).
+    now rewrite iota_is_list_from_one_to_n.
+  - simpl iota_iter.
+  replace ((S k') :: list_from_k (S (S k')) n)
+    with (list_from_k (S k') (S n)) by reflexivity.
+  rewrite IH. rewrite Nat.add_succ_r.
+  reflexivity.
+Qed.
