@@ -1852,3 +1852,22 @@ Proof.
     + apply Peano.le_n_S. apply IH, H.
     + apply Peano.le_S_n in H. apply IH, H.
 Qed.
+
+
+(* Exercise 6.41 *
+   Define a function that takes as arguments a type A,
+   a function of type [A->bool], and a list
+   and returns the first element in the list, for which the function is true
+   (use the option type). *)
+Fixpoint find {X : Type} (P : X -> bool) (xs : list X) : option X
+  := match xs with
+     | nil => None
+     | x1 :: xs1 => if P x1 then Some x1
+                  else find P xs1
+     end.
+
+Theorem find_correct {X : Type} (P : X -> bool) (xs : list X) : find P xs = List.find P xs.
+Proof.
+  induction xs as [| x1 xs1 IH]; try reflexivity.
+  simpl. now rewrite IH.
+Qed.
