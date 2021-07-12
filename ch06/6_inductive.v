@@ -1838,3 +1838,21 @@ Proof.
   induction n as [| n' IH]; destruct xs as [| x1 xs1]; try reflexivity.
   simpl. apply IH.
 Qed.
+
+(* Exercise 6.40 * Prove: *)
+Lemma nth_length (X : Set) (n : nat) (xs : list X)
+  : nth_option n xs = None <-> length xs <= n.
+Proof.
+  split.
+  - generalize dependent xs.
+    induction n as [| n' IH]; destruct xs as [| x1 xs1]; intro H; simpl.
+    + apply Nat.le_refl.
+    + simpl in H. discriminate H.
+    + apply Nat.le_0_l.
+    + apply Peano.le_n_S. simpl in H. apply IH, H.
+  - generalize dependent xs.
+    induction n as [| n' IH]; destruct xs as [| x1 xs1]; intro H;
+      simpl; try reflexivity.
+    + simpl in H. inversion H.
+    + simpl in H. apply Peano.le_S_n in H. apply IH, H.
+Qed.
