@@ -672,7 +672,23 @@ Fixpoint iterate' {A : Type} (f : A -> A) (n : nat) (x : A) {struct n} : A
      | S p => iterate' f p (f x)
      end.
 
+Theorem iterate_step {A : Type} (f : A -> A) (n : nat) (x : A)
+  : iterate f (S n) x = f (iterate f n x).
+Proof. reflexivity. Qed.
+
 Theorem iterate'_step {A : Type} (f : A -> A) (n : nat) (x : A)
+  : iterate' f (S n) x = iterate' f n (f x).
+Proof. reflexivity. Qed.
+
+Theorem iterate_fstep {A : Type} (f : A -> A) (n : nat) (x : A)
+  : iterate f n (f x) = f (iterate f n x).
+Proof.
+  generalize dependent x.
+  induction n as [| p IH]; try reflexivity.
+  simpl. intro x. now rewrite IH.
+Qed.
+
+Theorem iterate'_fstep {A : Type} (f : A -> A) (n : nat) (x : A)
   : iterate' f n (f x) = f (iterate' f n x).
 Proof.
   generalize dependent x.
@@ -684,7 +700,21 @@ Theorem iterate_eq {A : Type} (f : A -> A) (n : nat) (x : A)
   : iterate f n x = iterate' f n x.
 Proof.
   induction n as [| p IH]; try reflexivity.
-  simpl. rewrite IH, iterate'_step. reflexivity.
+  simpl. rewrite IH, iterate'_fstep. reflexivity.
+Qed.
+
+Theorem iterate_fixpoint {X : Type} (f : X -> X) (x : X)
+  : f x = x -> forall n : nat, iterate f n x = x.
+Proof.
+  intros H n. induction n as [| n' IH]; try reflexivity.
+  simpl. now rewrite IH, H.
+Qed.
+
+Theorem iterate_fixpoint1 {X : Type} (f : X -> X) (x y : X)
+  : f x = y -> f y = y -> forall n : nat, iterate f (S n) x = y.
+Proof.
+  intros H0 H n. rewrite iterate_eq. simpl. rewrite H0.
+  now rewrite <- iterate_eq, iterate_fixpoint.
 Qed.
 
 (* Exercise 6.14
@@ -1651,7 +1681,8 @@ Proof.
   now rewrite Nat.add_1_r.
 Qed.
 
-Theorem iota_iter_to_list_from_k2 (k n : nat) : iota_iter k (list_from_k (S k) n) = iota_iter (k + n) nil.
+Theorem iota_iter_to_list_from_k2 (k n : nat)
+  : iota_iter k (list_from_k (S k) n) = iota_iter (k + n) nil.
 Proof.
   generalize dependent n.
   induction k as [| k' IH]; intro n.
@@ -1662,4 +1693,148 @@ Proof.
     with (list_from_k (S k') (S n)) by reflexivity.
   rewrite IH. rewrite Nat.add_succ_r.
   reflexivity.
+Qed.
+
+(* 6.4.2 The option Type *)
+Print option.
+(* Inductive option (A : Type) : Type
+   := Some : A -> option A
+    | None : option A *)
+Definition pred_option (n : nat) : option nat
+  := match n with
+     | O => None
+     | S n' => Some n'
+     end.
+
+Definition pred2_option (n : nat) : option nat
+  := match pred_option n with
+     | None => None
+     | Some p => pred_option p
+     end.
+
+(* my attempt to get convenient combinators for [option] type *)
+Definition option_map {X Y : Type} (opt_x : option X) (f : X -> Y) : option Y
+  := match opt_x with
+     | Some x => Some (f x)
+     | None => None
+     end.
+
+Notation "opt_x '|>' f" := (option_map opt_x f)
+                             (at level 65, left associativity).
+
+Example option_map_ex : Some 1 |> S = Some 2.
+Proof. reflexivity. Qed.
+
+Definition option_flat_map {X Y : Type} (opt_x : option X) (f : X -> option Y) : option Y
+  := match opt_x with
+     | Some x => f x
+     | None => None
+     end.
+
+Notation "opt_x '|>>' f" := (option_flat_map opt_x f)
+                              (at level 65, left associativity).
+
+Example option_flat_map_ex0 : Some 0 |>> pred_option = None.
+Proof. reflexivity. Qed.
+
+Example option_flat_map_ex1 : Some 1 |>> pred_option = Some 0.
+Proof. reflexivity. Qed.
+
+Definition option_get {X : Type} (opt_x : option X) (default : X)
+  := match opt_x with
+     | Some x => x
+     | None => default
+     end.
+
+Notation "opt_x '|v' default" := (option_get opt_x default)
+                              (at level 65, left associativity).
+
+Example option_get_ex0 : None |v 1 = 1.
+Proof. reflexivity. Qed.
+
+Example option_get_ex1 : Some 2 |v 1 = 2.
+Proof. reflexivity. Qed.
+
+Example option_helpers_ex : Some 1 |> S |>> pred_option |v 0 = 1.
+Proof. reflexivity. Qed.
+(* end *)
+
+(* rewrite [pred2_option] using new helpers *)
+Definition pred2_option' (n : nat) : option nat
+  := pred_option n |>> pred_option.
+
+Theorem pred2_option_eq (n : nat) : pred2_option n = pred2_option' n.
+Proof. reflexivity. Qed.
+
+Fixpoint nth_option {X : Type} (n : nat) (xs : list X) {struct xs} : option X
+  := match n, xs with
+     | _, nil => None
+     | O, x1 :: _ => Some x1
+     | S n', x1 :: xs1 => nth_option n' xs1
+     end.
+
+(* Theorem nth_option_zero {X : Type} (xs : list X) : nth_option 0 xs = None. *)
+(* Proof. *)
+(*   destruct xs; try reflexivity. simpl. *)
+
+Definition tl_error {X : Type} (xs : list X)
+  := match xs with
+     | nil => None
+     | _ :: xs1 => Some xs1
+     end.
+
+Definition nth_option_it {X : Type} (n : nat) (xs : list X) : option X
+  := iterate (fun opt_xs => opt_xs |>> tl_error) n (Some xs) |>> @hd_error X.
+
+Theorem nth_option_it_of_nil {X : Type} (n : nat) : nth_option_it n (@nil X) = None.
+Proof.
+  unfold nth_option_it. destruct n as [| n']; try reflexivity.
+  rewrite iterate_fixpoint1 with (y := None); reflexivity.
+Qed.
+
+Theorem nth_option_it_step {X : Type} (n : nat) (x : X) (xs : list X)
+  : nth_option_it (S n) (x :: xs)  = nth_option_it n xs.
+Proof.
+  unfold nth_option_it.
+  generalize dependent xs.
+  generalize dependent x.
+  induction n as [| n' IH]; try reflexivity. intros x xs.
+  remember (fun opt_xs => opt_xs |>> tl_error) as f eqn:feq.
+  rewrite iterate_eq, iterate'_step, iterate_eq, <- iterate_eq.
+  rewrite iterate'_step, <- iterate_eq.
+  replace (f (Some (x :: xs))) with (Some xs) by (subst f; reflexivity).
+  destruct xs as [| x1 xs1].
+  - rewrite iterate_fixpoint1 with (y := None); try (subst f; reflexivity).
+    replace (f (Some nil)) with (@None (list X)) by (subst f; reflexivity).
+    rewrite iterate_fixpoint; subst f; reflexivity.
+  - rewrite IH. subst f; reflexivity.
+Qed.
+
+Theorem nth_option_it_eq {X : Type} (n : nat) (xs : list X)
+  : nth_option n xs = nth_option_it n xs.
+Proof.
+  generalize dependent xs.
+  induction n as [| n' IH]; destruct xs as [| x1 xs1]; try reflexivity.
+  - now rewrite nth_option_it_of_nil.
+  - rewrite nth_option_it_step. simpl. now rewrite IH.
+Qed.
+
+(* Exercise 6.39
+   Define the other variant [nth_option']. The arguments are
+   given in the same order, but the principal argument is the number [n].
+   Prove that both functions always give the same result
+   when applied on the same input. *)
+Fixpoint nth_option' {X : Type} (n : nat) (xs : list X) {struct n} : option X
+  := match n, xs with
+     | _, nil => None
+     | O, x1 :: _ => Some x1
+     | S n', x1 :: xs1 => nth_option' n' xs1
+     end.
+
+Theorem nth_option_eq {X : Type} (n : nat) (xs : list X)
+  : nth_option n xs = nth_option' n xs.
+Proof.
+  generalize dependent xs.
+  induction n as [| n' IH]; destruct xs as [| x1 xs1]; try reflexivity.
+  simpl. apply IH.
 Qed.
