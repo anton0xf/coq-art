@@ -1990,7 +1990,7 @@ Fixpoint F_to_rat (f : F) : nat * nat (* return [m / k], [k > 0] *)
             in (uncurry rat_simp) (k, k + m)
    end.
 
-Theorem  rat_simp_is_irreducible (m k : nat)
+Theorem rat_simp_is_irreducible (m k : nat)
   : let (m', k') := rat_simp m k in Nat.gcd m' k' <= 1.
 Proof.
   destruct (rat_simp m k) as (m', k') eqn:eq.
@@ -2002,7 +2002,7 @@ Proof.
     now rewrite Nat.gcd_div_gcd.
 Qed.
 
-Theorem  F_to_rat_is_irreducible (f : F)
+Theorem F_to_rat_is_irreducible (f : F)
   : let (m, k) := F_to_rat f in Nat.gcd m k <= 1.
 Proof.
   induction f as [| x IH | x IH].
