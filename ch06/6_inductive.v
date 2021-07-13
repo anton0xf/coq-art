@@ -1969,3 +1969,47 @@ Proof.
   induction t as [| z t1 IH1 t2 IH2]; [reflexivity|].
   simpl. rewrite IH1, IH2. reflexivity.
 Qed.
+
+(* Exercise 6.44
+   This exercise continues Exercise 6.24 page 169.
+   Build the function that takes an element of the type defined
+   to represent rational numbers and returns the numerator and denominator
+   of the corresponding reduced fraction. *)
+Print F.
+(* Inductive F : Set :=  one : F | n : F -> F | d : F -> F *)
+
+(* N(x) = 1 + x
+   D(x) = 1 / (1 + 1/x) *)
+
+Definition rat_simp (m k : nat) : nat * nat := let d := Nat.gcd m k in (m / d, k / d).
+Fixpoint F_to_rat (f : F) : nat * nat (* return [m / k], [k > 0] *)
+  := match f with
+   | one => (1, 1)
+   | n x => let (m, k) := F_to_rat x in (m + k, k)
+   | d x =>  let (m, k) := F_to_rat x
+            in (uncurry rat_simp) (k, k + m)
+   end.
+
+Theorem  rat_simp_is_irreducible (m k : nat)
+  : let (m', k') := rat_simp m k in Nat.gcd m' k' <= 1.
+Proof.
+  destruct (rat_simp m k) as (m', k') eqn:eq.
+  unfold rat_simp in eq. apply pair_equal_spec in eq.
+  destruct eq as (eqm, eqk). subst m' k'.
+  destruct (Nat.gcd m k =? 0) eqn:H.
+  - apply Nat.eqb_eq in H. rewrite !H. simpl. apply Nat.le_0_1.
+  - apply Nat.eqb_neq in H. remember (Nat.gcd m k) as g eqn:eq.
+    now rewrite Nat.gcd_div_gcd.
+Qed.
+
+Theorem  F_to_rat_is_irreducible (f : F)
+  : let (m, k) := F_to_rat f in Nat.gcd m k <= 1.
+Proof.
+  induction f as [| x IH | x IH].
+  - simpl. reflexivity.
+  - simpl. destruct (F_to_rat x) as (m, k).
+    rewrite Nat.gcd_comm, Nat.gcd_add_diag_r, Nat.gcd_comm.
+    assumption.
+  - simpl. destruct (F_to_rat x) as (m, k).
+    apply rat_simp_is_irreducible.
+Qed.
