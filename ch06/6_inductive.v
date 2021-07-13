@@ -1871,3 +1871,66 @@ Proof.
   induction xs as [| x1 xs1 IH]; try reflexivity.
   simpl. now rewrite IH.
 Qed.
+
+(* 6.4.3 The Type of Pairs *)
+
+(* Exercise 6.42
+   Define two functions with the following type
+   [split : forall A B : Type, list (A * B) -> list A * list B]
+   [combine : forall A B : Type, list A -> list B -> list (A * B)]
+   and the usual behavior (transform a list of pairs into a pair of lists
+   containing the same data, and vice-versa, whenever possible)
+   Prove a simple theorem relating split and combine. *)
+Fixpoint combine {X Y : Type} (xs : list X) (ys : list Y) : list (X * Y)
+  := match xs, ys with
+     | nil, _ | _, nil => nil
+     | x1 :: xs1, y1 :: ys1 => (x1, y1) :: combine xs1 ys1
+     end.
+
+Fixpoint split {X Y : Type} (xys : list (X * Y)) : list X * list Y
+  := match xys with
+     | nil => (nil, nil)
+     | (x1, y1) :: xys1 => let s := split xys1
+                         in (x1 :: fst s, y1 :: snd s)
+     end.
+
+Import ListNotations.
+
+Example combine_ex : combine [1; 2; 3] [4; 5; 6; 7] = [(1, 4); (2, 5); (3, 6)].
+Proof. reflexivity. Qed.
+
+Example split_ex : split [(1, 4); (2, 5); (3, 6)] = ([1; 2; 3], [4; 5; 6]).
+Proof. reflexivity. Qed.
+
+Theorem split_combine_is_id {X Y : Type} (xs : list X) (ys : list Y)
+  : length xs = length ys -> split (combine xs ys) = (xs, ys).
+Proof.
+  generalize dependent ys.
+  induction xs as [| x1 xs1 IH]; intros ys H.
+  - simpl in H. symmetry in H. apply length_zero_iff_nil in H.
+    subst ys. reflexivity.
+  - destruct ys as [| y1 ys1].
+    + simpl length in H at 2. apply length_zero_iff_nil in H.
+      discriminate H.
+    + simpl. simpl in H. apply Nat.succ_inj in H.
+      apply IH in H. rewrite !H. reflexivity.
+Qed.
+
+Theorem combine_split_is_id {X Y : Type} (xys : list (X * Y))
+  : (uncurry combine) (split xys) = xys.
+Proof.
+  induction xys as [| xy1 xys1 IH]; try reflexivity.
+  simpl. destruct xy1 as (x1, y1). simpl.
+  unfold uncurry in IH.
+  destruct (split xys1) as (xs1, ys1). simpl.
+  rewrite IH. reflexivity.
+Qed.
+
+(* Authors' theorem *)
+Theorem combine_of_split {A B : Type} (l : list (A * B))
+  : let (l1, l2) :=  split l
+    in combine l1 l2 = l.
+Proof.
+  induction l; simpl; auto.
+  destruct a, (split l). simpl. congruence.
+Qed.
