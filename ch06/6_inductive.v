@@ -1934,3 +1934,38 @@ Proof.
   induction l; simpl; auto.
   destruct a, (split l). simpl. congruence.
 Qed.
+
+(* Exercise 6.43
+   Build the type [btree] of polymorphic binary trees.
+   Define translation functions from [Z_btree] to [btree Z] and vice versa.
+   Prove that they are inverse to each other. *)
+Inductive btree (X : Type) : Type
+  := bleaf : btree X
+   | bnode : X -> btree X -> btree X -> btree X.
+
+Arguments bleaf {X}.
+Arguments bnode {X}.
+
+Fixpoint btree_from_Z (t : Z_btree) : btree Z
+  := match t with
+     | Z_leaf => bleaf
+     | Z_bnode z t1 t2 => bnode z (btree_from_Z t1) (btree_from_Z t2)
+     end.
+
+Fixpoint btree_to_Z (t : btree Z) : Z_btree
+  := match t with
+     | bleaf => Z_leaf
+     | bnode z t1 t2 => Z_bnode z (btree_to_Z t1) (btree_to_Z t2)
+     end.
+
+Theorem Z_btree_conv1 (t : Z_btree) : btree_to_Z (btree_from_Z t) = t.
+Proof.
+  induction t as [| z t1 IH1 t2 IH2]; [reflexivity|].
+  simpl. rewrite IH1, IH2. reflexivity.
+Qed.
+
+Theorem Z_btree_conv2 (t : btree Z) : btree_from_Z (btree_to_Z t) = t.
+Proof.
+  induction t as [| z t1 IH1 t2 IH2]; [reflexivity|].
+  simpl. rewrite IH1, IH2. reflexivity.
+Qed.
