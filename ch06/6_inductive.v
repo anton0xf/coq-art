@@ -2013,3 +2013,363 @@ Proof.
   - simpl. destruct (F_to_rat x) as (m, k).
     apply rat_simp_is_irreducible.
 Qed.
+
+(* Exercise 6.45 ***
+   The aim of this exercise is to implement a sieve function
+   that computes all the prime numbers that are less than a given number.
+   The first step is to define a type of comparison values: *)
+Inductive cmp : Set := Less | Equal | Greater.
+
+(* Then define the following functions:
+   1. [three_way_compare : nat -> nat -> cmp]
+   for comparing two natural numbers.
+
+   2. [update_primes : nat -> (list nat * nat) -> (list nat * nat) * bool]
+   such that if [k] is a natural number and [l] is a list of pairs [(p,m)]
+   such that [m] is the smallest multiple of [p] greater than or equal to [k],
+   then [update_primes k l] returns the list of pairs [(p,m')]
+   where [m'] is the smallest multiple of [p] strictly greater than [k]
+   and a boolean value that is true if one of the [m] was equal to [k].
+
+   3. [prime_sieve : nat -> (list nat * nat)]
+   to map a number [k] to the list of pairs [(p,m)]
+   where [p] is a prime number smaller or equal to [k]
+   and [m] is the smallest multiple of [p] greater than or equal to [k + 1].
+
+   Prove that [prime_sieve] can be used to compute all the prime numbers
+   smaller than a given [k]. *)
+
+Fixpoint three_way_compare (n m : nat) : cmp
+  := match n, m with
+     | O, O => Equal
+     | O, S _ => Less
+     | S _, O => Greater
+     | S n', S m' => three_way_compare n' m'
+     end.
+
+Theorem both_true_iff (A B : Prop) : A -> B -> A <-> B.
+Proof. intros a b. split; intro H; assumption. Qed.
+
+Theorem both_false_iff (A B : Prop) : ~A -> ~B -> A <-> B.
+Proof. intros na nb. split; intro H; contradiction. Qed.
+
+Theorem Equal_is_eq (n m : nat) : three_way_compare n m = Equal <-> n = m.
+Proof.
+  generalize dependent m.
+  induction n as [| n' IH]; intro m; destruct m as [| m']; simpl.
+  - apply both_true_iff; reflexivity.
+  - apply both_false_iff; [discriminate | apply Nat.neq_0_succ].
+  - apply both_false_iff; [discriminate | apply Nat.neq_succ_0].
+  - rewrite IH. rewrite Nat.succ_inj_wd. reflexivity.
+Qed.
+
+Theorem Less_is_lt (n m : nat) : three_way_compare n m = Less <-> n < m.
+Proof.
+  generalize dependent m.
+  induction n as [| n' IH]; intro m; destruct m as [| m']; simpl.
+  - apply both_false_iff; [discriminate | apply Nat.nle_succ_0].
+  - apply both_true_iff; [reflexivity | apply Peano.le_n_S, Peano.le_0_n].
+  - apply both_false_iff; [discriminate | apply Nat.nle_succ_0].
+  - rewrite IH. apply Nat.succ_lt_mono.
+Qed.
+
+Theorem Greater_is_gt (n m : nat) : three_way_compare n m = Greater <-> n > m.
+Proof.
+  generalize dependent m.
+  induction n as [| n' IH]; intro m; destruct m as [| m']; simpl.
+  - apply both_false_iff; [discriminate | apply gt_irrefl].
+  - apply both_false_iff; [discriminate | apply Nat.nlt_0_r].
+  - apply both_true_iff; [reflexivity | apply Peano.le_n_S, Peano.le_0_n].
+  - rewrite IH. apply Nat.succ_lt_mono.
+Qed.
+
+Definition update_prime (k p m : nat) : nat * bool
+  := match three_way_compare m k with
+     | Equal => (m + p, true)
+     | Less => (m + p, false) (* assume that m >= k so it is not possible *)
+     | Greater => (m, false)
+     end.
+
+Lemma update_prime_m_mult (p m k m' : nat) (is_comp : bool)
+  : p <> 0 -> (m mod p =? 0) = true -> update_prime k p m = (m', is_comp)
+    -> (m' mod p =? 0) = true.
+Proof.
+  intros pnz eq0. unfold update_prime.
+  destruct (three_way_compare m k);
+    intro H; injection H; clear H; intros eq1 eq2.
+  - rewrite <- eq2. simpl. rewrite <- (Nat.mul_1_l p) at 1.
+    rewrite Nat.mod_add; assumption.
+  - rewrite <- eq2. simpl. rewrite <- (Nat.mul_1_l p) at 1.
+    rewrite Nat.mod_add; assumption.
+  - rewrite <- eq2. assumption.
+Qed.
+
+Lemma update_prime_gt_k (p m k m' : nat) (is_comp : bool)
+  : p <> 0 -> k <= m -> update_prime k p m = (m', is_comp) -> k < m'.
+Proof.
+  intros pnz ge eq. unfold update_prime in eq.
+  destruct (three_way_compare m k) eqn:cmp;
+    injection eq; clear eq; intros eq1 eq2.
+  - apply Less_is_lt in cmp. apply le_not_lt in ge.
+    contradiction cmp.
+  - apply Equal_is_eq in cmp. subst k m'.
+    apply Nat.lt_add_pos_r, Nat.neq_0_lt_0, pnz.
+  - apply Greater_is_gt in cmp. unfold gt in cmp.
+    subst m'. assumption.
+Qed.
+
+Lemma update_prime_min (p m k m' : nat) (is_comp : bool)
+  : m - p < k -> update_prime k p m = (m', is_comp)
+    -> m' - p <= k.
+Proof.
+  intros lt eq. unfold update_prime in eq.
+  destruct (three_way_compare m k) eqn:cmp;
+    injection eq; clear eq; intros eq1 eq2; subst m'.
+  - apply Less_is_lt in cmp.
+    rewrite Nat.add_sub. apply Nat.lt_le_incl, cmp.
+  - apply Equal_is_eq in cmp. subst k.
+    rewrite Nat.add_sub. apply Nat.le_refl.
+  - apply Greater_is_gt in cmp. unfold gt in cmp.
+    apply Nat.lt_le_incl, lt.
+Qed.
+
+Lemma update_prime_is_comp (p m k m' : nat) (is_comp : bool)
+  : update_prime k p m = (m', is_comp) -> is_comp = (m =? k).
+Proof.
+  intro eq. unfold update_prime in eq.
+  destruct (three_way_compare m k) eqn:cmp;
+    injection eq; clear eq; intros eq1 eq2; subst m'.
+  - apply Less_is_lt in cmp. subst is_comp. symmetry.
+    apply Nat.eqb_neq, Nat.lt_neq, cmp.
+  - apply Equal_is_eq in cmp. subst k is_comp.
+    apply beq_nat_refl.
+  - apply Greater_is_gt in cmp. unfold gt in cmp.
+    subst is_comp. symmetry. rewrite Nat.eqb_sym.
+    apply Nat.eqb_neq, Nat.lt_neq, cmp.
+Qed.
+
+Fixpoint update_primes (k : nat) (ps : list (nat * nat)) {struct ps}
+  : (list (nat * nat)) * bool
+  := match ps with
+     | [] => ([], false)
+     | (p, m) :: ps0 => let (ps1, is_comp1) := update_primes k ps0 in
+                      let (m2, is_comp2) := update_prime k p m in
+                      ((p, m2) :: ps1, is_comp1 || is_comp2)
+     end.
+
+Example update_primes_ex0 : update_primes 2 [] = ([], false).
+Proof. reflexivity. Qed.
+
+Example update_primes_ex1 : update_primes 2 [(2, 2)] = ([(2, 4)], true).
+Proof. reflexivity. Qed.
+
+Example update_primes_ex2 : update_primes 5 [(2, 6)] = ([(2, 6)], false).
+Proof. reflexivity. Qed.
+
+Example update_primes_ex3 : update_primes 6 [(3, 6)] = ([(3, 9)], true).
+Proof. reflexivity. Qed.
+
+Definition prime (n : nat)
+  := (n <> 0 /\ n <> 1) /\ ~(exists k : nat, 1 < k < n /\ n mod k = 0).
+
+(* return true if [p k = true] for all [k] such that [n0 < k < n] *)
+Fixpoint forallb_in_interval (n0 n : nat) (p : nat -> bool) : bool
+  := match n with
+     | O => true
+     | S n' => if n <=? S n0 then true
+              else p n' && forallb_in_interval n0 n' p
+     end.
+
+Example forallb_in_interval_ex1
+  : forallb_in_interval 3 5 (fun k => k =? 4) = true.
+Proof. reflexivity. Qed.
+
+Example forallb_in_interval_ex2
+  : forallb_in_interval 3 4 (fun k => false) = true.
+Proof. reflexivity. Qed.
+
+Example forallb_in_interval_ex3
+  : forallb_in_interval 3 3 (fun k => false) = true.
+Proof. reflexivity. Qed.
+
+Example forallb_in_interval_ex4
+  : forallb_in_interval 3 2 (fun k => false) = true.
+Proof. reflexivity. Qed.
+
+Example forallb_in_interval_ex5
+  : forallb_in_interval 2 10 (fun k => (2 <? k) && (k <? 10)) = true.
+Proof. reflexivity. Qed.
+
+Example forallb_in_interval_ex6
+  : forallb_in_interval 1 10 (fun k => (2 <? k) && (k <? 10)) = false.
+Proof. reflexivity. Qed.
+
+Example forallb_in_interval_ex7
+  : forallb_in_interval 3 11 (fun k => (2 <? k) && (k <? 10)) = false.
+Proof. reflexivity. Qed.
+
+(* return true if [p k = true] for all [k] such that [n0 < k < n] *)
+Fixpoint existsb_in_interval (n0 n : nat) (p : nat -> bool) : bool
+  := match n with
+     | O => false
+     | S n' => if n <=? S n0 then false
+              else p n' || existsb_in_interval n0 n' p
+     end.
+
+Theorem existsb_in_interval_correct
+        (n0 n : nat) (f : nat -> bool) (P : nat -> Prop)
+  : (forall k : nat, P k <-> f k = true)
+    -> (exists k : nat, n0 < k < n /\ P k) <-> (existsb_in_interval n0 n f = true).
+Proof.
+  intro P_is_f. split; intro H.
+  - destruct H as [k [[neq_n0_k neq_k] pk]].
+    induction n as [| n' IH].
+    + contradict neq_k. apply Nat.nlt_0_r.
+    + simpl. apply lt_n_Sm_le in neq_k.
+      replace (n' <=? n0) with false.
+      2:{ symmetry. apply Nat.leb_gt.
+          apply (Nat.lt_le_trans n0 k n'); assumption. }
+      pose (le_lt_or_eq k n' neq_k) as neq_k2.
+      destruct neq_k2 as [neq_k2 | eq_k].
+      * now rewrite (IH neq_k2), orb_true_r.
+      * apply P_is_f in pk. subst k. now rewrite pk.
+  - induction n as [| n' IH]; simpl in H.
+    + discriminate H.
+    + destruct (lt_eq_lt_dec n0 n') as [[n0_lt_n | n0_eq_n] | n0_gt_n].
+      * replace (n' <=? n0) with false in H.
+        2:{ symmetry. apply Nat.leb_gt. assumption. }
+        { apply orb_prop in H as [H | H].
+          - apply P_is_f in H. exists n'. split; auto with arith.
+          - apply IH in H. destruct H as [k [[neq_k1 neq_k2] pk]].
+            exists k. split; [| exact pk].
+            split; [exact neq_k1| apply Nat.lt_lt_succ_r, neq_k2].
+        }
+      * subst n'. rewrite Nat.leb_refl in H. discriminate H.
+      * replace (n' <=? n0) with true in H.
+        2:{ apply Nat.lt_le_incl, Nat.leb_le in n0_gt_n.
+            now rewrite n0_gt_n. }
+        discriminate H.
+Qed.
+
+Definition is_prime (n : nat) : bool
+  := negb ((n =? 0) || (n =? 1)
+           || existsb_in_interval 1 n (fun k => n mod k =? 0)).
+
+Compute (seq 1 13).
+(* = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13] : list nat *)
+
+Compute (map is_prime (seq 1 13)).
+(* = [1: false; 2: true; 3: true; 4: false; 5: true; 6: false;
+      7: true; 8: false; 9: false; 10: false; 11: true;
+      12: false; 13: true] : list bool *)
+
+Example is_prime_ex
+  : map is_prime (seq 1 13)
+    = [false; true; true; false; true; false; true; false; false;
+      false; true; false; true].
+Proof. reflexivity. Qed.
+
+Theorem prime_is_prime (n : nat) : prime n <-> is_prime n = true.
+Proof.
+  unfold prime, is_prime.
+  rewrite !negb_orb, !andb_true_iff.
+  rewrite !negb_true_iff, !Nat.eqb_neq.
+  apply and_iff_compat_l. rewrite <- not_true_iff_false.
+  apply not_iff_compat. apply existsb_in_interval_correct.
+  intro k. rewrite Nat.eqb_eq. reflexivity.
+Qed.
+
+(* Check that [ps] is a list of pairs [(p,m)]
+   such that [m] is the smallest multiple of [p]
+   greater than or equal to [k] *)
+Fixpoint is_primes_list (k : nat) (ps : list (nat * nat)) : bool
+  := match ps with
+     | [] => true
+     | (p, m) :: ps' => negb (p =? 0)
+                      && (m mod p =? 0)
+                      && (k <=? m) && (m - p <? k)
+                      && is_primes_list k ps'
+     end.
+
+Example is_primes_list_ex1 : is_primes_list 2 [(2, 2)] = true.
+Proof. reflexivity. Qed.
+
+Example is_primes_list_ex2 : is_primes_list 5 [(2, 6)] = true.
+Proof. reflexivity. Qed.
+
+Example is_primes_list_ex3 : is_primes_list 5 [(2, 5)] = false.
+Proof. reflexivity. Qed.
+
+Example is_primes_list_ex4 : is_primes_list 5 [(2, 4)] = false.
+Proof. reflexivity. Qed.
+
+(* Returns true if exists pair [(p, m) In ps] such that [m = k].
+   It means that one of [p] numbers is divisor of [k] *)
+Fixpoint is_compsite (k : nat) (ps : list (nat * nat)) : bool
+  := match ps with
+     | [] => false
+     | (p, m) :: ps' => (m =? k) || is_compsite k ps'
+     end.
+
+Lemma eq_orb_intro_r (a1 a2 b : bool) : a1 = a2 -> a1 || b = a2 || b.
+Proof. intro H. now subst a2. Qed.
+
+(* [update_primes k ps] returns the list of pairs [(p,m')]
+   where [m'] is the smallest multiple of [p] strictly greater than [k]
+   and a boolean value that is true if one of the [m] was equal to [k]. *)
+Theorem update_primes_correct (k : nat) (ps : list (nat * nat))
+  : is_primes_list k ps = true
+    -> let (ps1, is_comp1) := update_primes k ps in
+      (is_primes_list (S k) ps1 = true)
+      /\ (is_comp1 = is_compsite k ps).
+Proof.
+  generalize dependent k.
+  induction ps as [| (p, m) ps' IH]; intros k eq0; simpl; try easy.
+  (* get rid of let *)
+  destruct (update_primes k ps') as (ps1, is_comp1) eqn:eq1.
+  destruct (update_prime k p m) as (m2, is_comp2) eqn:eq2.
+  (* destruct [eq0] *)
+  simpl in eq0. apply andb_prop in eq0. destruct eq0 as [H0 eq0].
+  apply andb_prop in H0. destruct H0 as [H0 m_min].
+  apply Nat.ltb_lt in m_min.
+  apply andb_prop in H0. destruct H0 as [H0 m_ge].
+  apply Nat.leb_le in m_ge.
+  apply andb_prop in H0. destruct H0 as [pnz m_mult].
+  apply negb_true_iff in pnz as pnz'. apply beq_nat_false in pnz'.
+  (* use IH *) pose (IH k eq0) as H.
+  rewrite eq1 in H. destruct H as [eq3 eq4].
+  split.
+  - simpl. rewrite eq3. rewrite andb_true_r.
+    repeat (apply andb_true_intro; split); try assumption.
+    + apply (update_prime_m_mult p m k m2 is_comp2); assumption.
+    + pose (update_prime_gt_k p m k m2 _ pnz' m_ge eq2) as m_gt.
+      destruct m2 as [| m2'].
+      * exfalso. apply (Nat.nlt_0_r k), m_gt.
+      * unfold lt in m_gt. apply le_S_n in m_gt.
+        apply Nat.leb_le, m_gt.
+    + apply Nat.ltb_lt. unfold lt. apply le_n_S.
+      apply (update_prime_min p m k m2 _ m_min eq2).
+  - subst is_comp1. rewrite orb_comm. apply eq_orb_intro_r.
+    exact (update_prime_is_comp p m k m2 is_comp2 eq2).
+Qed.
+
+(* to map a number [k] to the list of pairs [(p,m)]
+   where [p] is a prime number smaller or equal to [k]
+   and [m] is the smallest multiple of [p] greater than or equal to [k + 1]. *)
+Fixpoint prime_sieve (k : nat) : list (nat * nat)
+  := match k with
+     | 0 | 1 => []
+     | S k' => let (ps, is_comp) := update_primes k (prime_sieve k') in
+              if is_comp then ps else (k, k + k) :: ps
+     end.
+
+Example prime_sieve_ex2 : prime_sieve 2 = [(2, 4)].
+Proof. reflexivity. Qed.
+
+Example prime_sieve_ex3 : prime_sieve 3 = [(3, 6); (2, 4)].
+Proof. reflexivity. Qed.
+
+Definition get_primes (k : nat) : list nat := map fst (prime_sieve k).
+
+
+
