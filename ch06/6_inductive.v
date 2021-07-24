@@ -2289,6 +2289,7 @@ Fixpoint is_primes_list (k : nat) (ps : list (nat * nat)) : bool
                       && (m mod p =? 0)
                       && (k <=? m) && (m - p <? k)
                       && is_primes_list k ps'
+                      && is_prime p
      end.
 
 Example is_primes_list_ex1 : is_primes_list 2 [(2, 2)] = true.
@@ -2301,6 +2302,9 @@ Example is_primes_list_ex3 : is_primes_list 5 [(2, 5)] = false.
 Proof. reflexivity. Qed.
 
 Example is_primes_list_ex4 : is_primes_list 5 [(2, 4)] = false.
+Proof. reflexivity. Qed.
+
+Example is_primes_list_ex5 : is_primes_list 5 [(4, 8)] = false.
 Proof. reflexivity. Qed.
 
 (* Returns true if exists pair [(p, m) In ps] such that [m = k].
@@ -2329,7 +2333,9 @@ Proof.
   destruct (update_primes k ps') as (ps1, is_comp1) eqn:eq1.
   destruct (update_prime k p m) as (m2, is_comp2) eqn:eq2.
   (* destruct [eq0] *)
-  simpl in eq0. apply andb_prop in eq0. destruct eq0 as [H0 eq0].
+  simpl in eq0.
+  apply andb_prop in eq0. destruct eq0 as [H0 p_is_prime].
+  apply andb_prop in H0. destruct H0 as [H0 eq0].
   apply andb_prop in H0. destruct H0 as [H0 m_min].
   apply Nat.ltb_lt in m_min.
   apply andb_prop in H0. destruct H0 as [H0 m_ge].
@@ -2371,5 +2377,16 @@ Proof. reflexivity. Qed.
 
 Definition get_primes (k : nat) : list nat := map fst (prime_sieve k).
 
+Theorem get_primes_return_primes (k p : nat)
+  : In p (get_primes k) -> (p <= k /\ prime p).
+Proof.
+  generalize dependent p.
+  induction k as [| k' IH]; intros p H.
+  - simpl in H. destruct H.
+  - unfold get_primes in H. simpl in H.
+Admitted.
 
-
+Theorem get_primes_return_all_primes (k p : nat)
+  : p <= k  -> prime p -> In p (get_primes k).
+Proof.
+Admitted.
