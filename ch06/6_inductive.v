@@ -2366,7 +2366,7 @@ Fixpoint prime_sieve (k : nat) : list (nat * nat)
   := match k with
      | 0 | 1 => []
      | S k' => let (ps, is_comp) := update_primes k (prime_sieve k') in
-              if is_comp then ps else (k, k + k) :: ps
+              if is_comp then ps else (k, 2*k) :: ps
      end.
 
 Example prime_sieve_ex2 : prime_sieve 2 = [(2, 4)].
@@ -2374,6 +2374,37 @@ Proof. reflexivity. Qed.
 
 Example prime_sieve_ex3 : prime_sieve 3 = [(3, 6); (2, 4)].
 Proof. reflexivity. Qed.
+
+Example prime_sieve_ex4 : prime_sieve 4 = [(3, 6); (2, 6)].
+Proof. reflexivity. Qed.
+
+Example prime_sieve_1_is_primes_list
+  : is_primes_list 2 (prime_sieve 1) = true.
+Proof. reflexivity. Qed.
+
+Example prime_sieve_2_is_primes_list
+  : is_primes_list 3 (prime_sieve 2) = true.
+Proof. reflexivity. Qed.
+
+Example prime_sieve_3_is_primes_list
+  : is_primes_list 4 (prime_sieve 3) = true.
+Proof. reflexivity. Qed.
+
+Example prime_sieve_4_is_primes_list
+  : is_primes_list 5 (prime_sieve 4) = true.
+Proof. reflexivity. Qed.
+
+Example prime_sieve_10_is_primes_list
+  : is_primes_list 11 (prime_sieve 10) = true.
+Proof. reflexivity. Qed.
+
+Theorem prime_sieve_return_primes_list (k : nat)
+  : is_primes_list (S k) (prime_sieve k) = true.
+Proof.
+  induction k as [| k' IH]; [reflexivity |].
+  apply update_primes_correct in IH as H.
+  simpl.
+Admitted.
 
 Definition get_primes (k : nat) : list nat := map fst (prime_sieve k).
 
