@@ -2282,29 +2282,33 @@ Qed.
 (* Check that [ps] is a list of pairs [(p,m)]
    such that [m] is the smallest multiple of [p]
    greater than or equal to [k] *)
-Fixpoint is_primes_list (k : nat) (ps : list (nat * nat)) : bool
+Fixpoint is_ps_list (k : nat) (ps : list (nat * nat)) : bool
   := match ps with
      | [] => true
      | (p, m) :: ps' => negb (p =? 0)
                       && (m mod p =? 0)
                       && (k <=? m) && (m - p <? k)
-                      && is_primes_list k ps'
-                      && is_prime p
+                      && is_ps_list k ps'
      end.
 
-Example is_primes_list_ex1 : is_primes_list 2 [(2, 2)] = true.
+Theorem is_ps_list_step (k p m : nat) (ps : list (nat * nat))
+  : is_ps_list k ((p, m) :: ps)
+    = negb (p =? 0)
+      && (m mod p =? 0)
+      && (k <=? m) && (m - p <? k)
+      && is_ps_list k ps.
 Proof. reflexivity. Qed.
 
-Example is_primes_list_ex2 : is_primes_list 5 [(2, 6)] = true.
+Example is_ps_list_ex1 : is_ps_list 2 [(2, 2)] = true.
 Proof. reflexivity. Qed.
 
-Example is_primes_list_ex3 : is_primes_list 5 [(2, 5)] = false.
+Example is_ps_list_ex2 : is_ps_list 5 [(2, 6)] = true.
 Proof. reflexivity. Qed.
 
-Example is_primes_list_ex4 : is_primes_list 5 [(2, 4)] = false.
+Example is_ps_list_ex3 : is_ps_list 5 [(2, 5)] = false.
 Proof. reflexivity. Qed.
 
-Example is_primes_list_ex5 : is_primes_list 5 [(4, 8)] = false.
+Example is_ps_list_ex4 : is_ps_list 5 [(2, 4)] = false.
 Proof. reflexivity. Qed.
 
 (* Returns true if exists pair [(p, m) In ps] such that [m = k].
@@ -2322,9 +2326,9 @@ Proof. intro H. now subst a2. Qed.
    where [m'] is the smallest multiple of [p] strictly greater than [k]
    and a boolean value that is true if one of the [m] was equal to [k]. *)
 Theorem update_primes_correct (k : nat) (ps : list (nat * nat))
-  : is_primes_list k ps = true
+  : is_ps_list k ps = true
     -> let (ps1, is_comp1) := update_primes k ps in
-      (is_primes_list (S k) ps1 = true)
+      (is_ps_list (S k) ps1 = true)
       /\ (is_comp1 = is_compsite k ps).
 Proof.
   generalize dependent k.
@@ -2334,8 +2338,7 @@ Proof.
   destruct (update_prime k p m) as (m2, is_comp2) eqn:eq2.
   (* destruct [eq0] *)
   simpl in eq0.
-  apply andb_prop in eq0. destruct eq0 as [H0 p_is_prime].
-  apply andb_prop in H0. destruct H0 as [H0 eq0].
+  apply andb_prop in eq0. destruct eq0 as [H0 eq0].
   apply andb_prop in H0. destruct H0 as [H0 m_min].
   apply Nat.ltb_lt in m_min.
   apply andb_prop in H0. destruct H0 as [H0 m_ge].
@@ -2378,33 +2381,43 @@ Proof. reflexivity. Qed.
 Example prime_sieve_ex4 : prime_sieve 4 = [(3, 6); (2, 6)].
 Proof. reflexivity. Qed.
 
-Example prime_sieve_1_is_primes_list
-  : is_primes_list 2 (prime_sieve 1) = true.
+Example prime_sieve_1_is_ps_list
+  : is_ps_list 2 (prime_sieve 1) = true.
 Proof. reflexivity. Qed.
 
-Example prime_sieve_2_is_primes_list
-  : is_primes_list 3 (prime_sieve 2) = true.
+Example prime_sieve_2_is_ps_list
+  : is_ps_list 3 (prime_sieve 2) = true.
 Proof. reflexivity. Qed.
 
-Example prime_sieve_3_is_primes_list
-  : is_primes_list 4 (prime_sieve 3) = true.
+Example prime_sieve_3_is_ps_list
+  : is_ps_list 4 (prime_sieve 3) = true.
 Proof. reflexivity. Qed.
 
-Example prime_sieve_4_is_primes_list
-  : is_primes_list 5 (prime_sieve 4) = true.
+Example prime_sieve_4_is_ps_list
+  : is_ps_list 5 (prime_sieve 4) = true.
 Proof. reflexivity. Qed.
 
-Example prime_sieve_10_is_primes_list
-  : is_primes_list 11 (prime_sieve 10) = true.
+Example prime_sieve_10_is_ps_list
+  : is_ps_list 11 (prime_sieve 10) = true.
 Proof. reflexivity. Qed.
 
-Theorem prime_sieve_return_primes_list (k : nat)
-  : is_primes_list (S k) (prime_sieve k) = true.
+Theorem prime_sieve_is_ps_list (k : nat)
+  : is_ps_list (S k) (prime_sieve k) = true.
 Proof.
-  induction k as [| k' IH]; [reflexivity |].
+  induction k as [| k1 IH]; [reflexivity |].
   apply update_primes_correct in IH as H.
-  simpl.
-Admitted.
+  simpl prime_sieve.
+  destruct (update_primes (S k1) (prime_sieve k1)) as (ps1, is_comp1) eqn:eq.
+  destruct H as [H1 H2].
+  destruct k1 as [| k2]; [reflexivity |].
+  destruct is_comp1 eqn:Hcomp; [exact H1| ].
+  rewrite is_ps_list_step.
+  repeat (apply andb_true_intro; split); try auto with arith.
+  - replace (S (S k2 + S (S k2 + 0))) with (2 * (S (S k2))) by lia.
+    rewrite Nat.mod_mul; auto with arith.
+  - apply Nat.leb_le. lia.
+  - apply Nat.ltb_lt. lia.
+Qed.
 
 Definition get_primes (k : nat) : list nat := map fst (prime_sieve k).
 
