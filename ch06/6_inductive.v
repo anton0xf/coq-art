@@ -2313,10 +2313,10 @@ Proof. reflexivity. Qed.
 
 (* Returns true if exists pair [(p, m) In ps] such that [m = k].
    It means that one of [p] numbers is divisor of [k] *)
-Fixpoint is_compsite (k : nat) (ps : list (nat * nat)) : bool
+Fixpoint is_composite (k : nat) (ps : list (nat * nat)) : bool
   := match ps with
      | [] => false
-     | (p, m) :: ps' => (m =? k) || is_compsite k ps'
+     | (p, m) :: ps' => (m =? k) || is_composite k ps'
      end.
 
 Lemma eq_orb_intro_r (a1 a2 b : bool) : a1 = a2 -> a1 || b = a2 || b.
@@ -2329,7 +2329,7 @@ Theorem update_primes_correct (k : nat) (ps : list (nat * nat))
   : is_ps_list k ps = true
     -> let (ps1, is_comp1) := update_primes k ps in
       (is_ps_list (S k) ps1 = true)
-      /\ (is_comp1 = is_compsite k ps).
+      /\ (is_comp1 = is_composite k ps).
 Proof.
   generalize dependent k.
   induction ps as [| (p, m) ps' IH]; intros k eq0; simpl; try easy.
@@ -2421,16 +2421,276 @@ Qed.
 
 Definition get_primes (k : nat) : list nat := map fst (prime_sieve k).
 
+Theorem prime_sieve_Sk_eq (k : nat)
+  : snd (update_primes (S k) (prime_sieve k)) = true
+    -> prime_sieve (S k) = fst (update_primes (S k) (prime_sieve k)).
+Proof.
+  simpl (prime_sieve (S k)).
+  remember (prime_sieve k) as ps eqn:eq_ps.
+  remember (update_primes (S k) ps) as U eqn:eq_U.
+  intro H. destruct U as (ps__u, is_comp). simpl in H.
+  rewrite H. simpl. destruct k as [| k'].
+  - simpl in eq_ps. rewrite eq_ps in eq_U.
+    simpl in eq_U. injection eq_U. auto.
+  - reflexivity.
+Qed.
+
+Theorem prime_sieve_Sk_cons (k : nat)
+  : 0 < k
+    -> snd (update_primes (S k) (prime_sieve k)) = false
+    -> prime_sieve (S k)
+      = (S k, 2*(S k)) :: fst (update_primes (S k) (prime_sieve k)).
+Proof.
+  simpl (prime_sieve (S k)).
+  remember (prime_sieve k) as ps eqn:eq_ps.
+  remember (update_primes (S k) ps) as U eqn:eq_U.
+  intros k_gt H. destruct U as (ps__u, is_comp). simpl in H.
+  rewrite H. simpl. destruct k as [| k'].
+  - contradict k_gt. apply Nat.nlt_0_r.
+  - reflexivity.
+Qed.
+
+Theorem update_primes_dont_changes_primes (k : nat) (ps : list (nat * nat))
+  : map fst (fst (update_primes k ps)) = map fst ps.
+Proof.
+  induction ps as [| (p, m) ps1 IH]; [reflexivity|]. simpl.
+  destruct (update_primes k ps1) as (ps__u, is_comp1) eqn:eq1.
+  simpl in IH.
+  destruct (update_prime k p m) as (m', is_comp') eqn:eq'.
+  simpl. rewrite IH. reflexivity.
+Qed.
+
+Theorem get_primes_Sk_eq (k : nat)
+  : snd (update_primes (S k) (prime_sieve k)) = true
+    -> get_primes (S k) = get_primes k.
+Proof.
+  intro H. unfold get_primes. rewrite (prime_sieve_Sk_eq k H).
+  rewrite update_primes_dont_changes_primes. reflexivity.
+Qed.
+
+Theorem get_primes_Sk_cons (k : nat)
+  : 0 < k
+    -> snd (update_primes (S k) (prime_sieve k)) = false
+    -> get_primes (S k) = (S k) :: get_primes k.
+Proof.
+  intros k_gt H. unfold get_primes.
+  rewrite (prime_sieve_Sk_cons k k_gt H). simpl.
+  rewrite update_primes_dont_changes_primes. reflexivity.
+Qed.
+
+Theorem is_composite_prop (k : nat) (ps : list (nat * nat))
+  : is_ps_list k ps = true -> is_composite k ps = true
+    -> exists q : nat, In q (map fst ps) /\ k mod q = 0.
+Proof.
+  induction ps as [| (p, m) ps1 IH];
+    intros psl comp; [discriminate comp|].
+  simpl in psl, comp. rewrite !andb_true_iff in psl.
+  destruct psl as [[[[pnz p_div] k_lt] k_gt] psl].
+  rewrite negb_true_iff, Nat.eqb_neq in pnz.
+  rewrite Nat.eqb_eq in p_div. rewrite Nat.leb_le in k_lt.
+  rewrite Nat.ltb_lt in k_gt.
+  rewrite orb_true_iff in comp.
+  destruct comp as [eq | comp].
+  - apply Nat.eqb_eq in eq. subst m.
+    exists p. simpl. auto.
+  - simpl. apply (IH psl) in comp as [q [q_in q_div]].
+    exists q. auto.
+Qed.
+
+Theorem is_composite_prop_neg (k : nat) (ps : list (nat * nat))
+  : is_ps_list k ps = true -> is_composite k ps = false
+    -> forall q : nat, In q (map fst ps) -> k mod q <> 0.
+Proof.
+  induction ps as [| (p, m) ps' IH];
+    intros psl ncomp q qin; [contradict qin|].
+  simpl in *.
+  apply orb_false_elim in ncomp. destruct ncomp as [mnk ncomp'].
+  apply Nat.eqb_neq in mnk.
+  rewrite !andb_true_iff in psl.
+  destruct psl as [[[[pnz m_div_p] k_lt] k_gt] psl'].
+  apply negb_true_iff, Nat.eqb_neq in pnz.
+  apply Nat.eqb_eq in m_div_p. apply Nat.leb_le in k_lt.
+  apply Nat.ltb_lt in k_gt.
+  pose (IH psl' ncomp') as IH'.
+  destruct qin as [p_is_q | qin'].
+  - subst q. intro C.
+    apply Nat.mod_divides in C; [| exact pnz].
+    destruct C as [s eq_k].
+    apply Nat.mod_divides in m_div_p; [| exact pnz].
+    destruct m_div_p as [q eq_m]. subst k m.
+    apply Nat.neq_0_lt_0 in pnz as p_gt.
+    rewrite <- Nat.mul_le_mono_pos_l in k_lt; [|exact p_gt].
+    rewrite <- Nat.mul_pred_r in k_gt.
+    rewrite <- Nat.mul_lt_mono_pos_l in k_gt; [|exact p_gt].
+    apply mnk. rewrite Nat.mul_cancel_l; [|exact pnz].
+    destruct q as [| q'].
+    + apply le_n_0_eq in k_lt. now subst s.
+    + simpl in k_gt. rewrite Nat.le_succ_r in k_lt.
+      destruct k_lt as [neq | eq].
+      * apply (Nat.lt_le_trans _ _ _ k_gt) in neq.
+        contradict neq. apply Nat.lt_irrefl.
+      * now subst s.
+  - apply IH' in qin' as H. apply H.
+Qed.
+
+Theorem update_primes_snd_is_composite (k : nat)
+  : snd (update_primes (S k) (prime_sieve k))
+    = is_composite (S k) (prime_sieve k).
+Proof.
+  pose (prime_sieve_is_ps_list k) as H.
+  apply update_primes_correct in H.
+  destruct (update_primes (S k) (prime_sieve k)) as (ps, is_comp).
+  destruct H as [H1 H2]. rewrite <- H2. reflexivity.
+Qed.
+
+Theorem in_get_primes_Sk (p k : nat)
+  : In p (get_primes (S k))
+    -> In p (get_primes k)
+      \/ (p = S k /\ forall q : nat, In q (get_primes k) -> p mod q <> 0).
+Proof.
+  destruct (snd (update_primes (S k) (prime_sieve k))) eqn:eq.
+  - apply get_primes_Sk_eq in eq. rewrite eq. auto.
+  - destruct k as [| k']; intro H.
+    + simpl in *. contradict H.
+    + apply (get_primes_Sk_cons (S k')) in eq as T.
+      2:{ apply Nat.lt_0_succ. }
+      rewrite T in H. simpl in H. destruct H as [H | H].
+      * right. split; [auto|]. subst p. clear T.
+        rewrite update_primes_snd_is_composite in eq.
+        apply is_composite_prop_neg; [apply prime_sieve_is_ps_list | assumption].
+      * left. exact H.
+Qed.
+
+Theorem get_primes_include_Sk (k p : nat)
+  : In p (get_primes k) -> In p (get_primes (S k)).
+Proof.
+  destruct (snd (update_primes (S k) (prime_sieve k))) eqn:H.
+  - rewrite (get_primes_Sk_eq k H). auto.
+  - destruct k as [| k'].
+    + simpl. auto.
+    + pose (Nat.lt_0_succ k') as neq.
+      rewrite (get_primes_Sk_cons (S k') neq H).
+      intro H'. simpl. right. exact H'.
+Qed.
+
+Theorem prime_le_k (k p : nat) : In p (get_primes k) -> 1 < p <= k.
+Proof.
+  induction k as [| k1 IH]; [contradiction|]. intro H.
+  pose (prime_sieve_is_ps_list (S k1)) as psl.
+  destruct k1 as [| k2]; [contradict H|].
+  apply (in_get_primes_Sk p (S k2)) in H as [H | [H _]].
+  - apply IH in H. lia.
+  - subst p. lia.
+Qed.
+
+Theorem get_primes_prime_head (k : nat)
+  : prime k -> In k (get_primes k).
+Proof.
+  induction k as [| k1 IH]; intro H.
+  { simpl in *. unfold prime in H.
+    destruct H as [[C _] _]. now apply C. }
+  destruct (snd (update_primes (S k1) (prime_sieve k1))) eqn:H1.
+  - rewrite (get_primes_Sk_eq k1 H1).
+    rewrite update_primes_snd_is_composite in H1.
+    apply (is_composite_prop (S k1) _ (prime_sieve_is_ps_list k1)) in H1.
+    destruct H1 as [q [q_in q_div]].
+    unfold prime in H. destruct H as [[kn0 kn1] H].
+    exfalso. apply H. exists q. apply prime_le_k in q_in.
+    split; lia.
+  - destruct k1 as [| k2].
+    { apply prime_is_prime in H. unfold is_prime in H.
+      discriminate H. }
+    pose (Nat.lt_0_succ k2) as k_gt.
+    rewrite (get_primes_Sk_cons (S k2) k_gt H1).
+    simpl. now left.
+Qed.
+
+Theorem get_primes_div_k (k : nat)
+  : 1 < k -> exists p : nat, In p (get_primes k) /\ k mod p = 0.
+Proof.
+  intro k_gt.
+  destruct k as [| k1];
+    [contradict k_gt; apply Nat.nlt_0_r|].
+  destruct (snd (update_primes (S k1) (prime_sieve k1))) eqn:comp.
+  - rewrite (get_primes_Sk_eq k1 comp).
+    rewrite update_primes_snd_is_composite in comp.
+    apply (is_composite_prop
+             (S k1) (prime_sieve k1)
+             (prime_sieve_is_ps_list k1)
+             comp).
+  - apply lt_S_n in k_gt. rewrite (get_primes_Sk_cons k1 k_gt comp).
+    simpl. exists (S k1). split.
+    + left. reflexivity.
+    + apply Nat.mod_same. lia.
+Qed.
+
+Lemma get_primes_div' (k n : nat)
+  : 1 < n -> exists p : nat, 1 < p <= n /\ In p (get_primes (k + n)) /\ n mod p = 0.
+Proof.
+  induction k as [| k1 IH]; intro n_gt.
+  - simpl. apply get_primes_div_k in n_gt as [p [p_in p_div]].
+    exists p. split; [|split]; try assumption.
+    apply prime_le_k, p_in.
+  - apply IH in n_gt as [p [[p_gt p_lt] [p_in p_div]]].
+    clear IH. exists p. split; [auto | split]; [|exact p_div].
+    simpl. apply get_primes_include_Sk, p_in.
+Qed.
+
+Theorem get_primes_div (k n : nat)
+  : 1 < n <= k -> exists p : nat, 1 < p <= n /\ In p (get_primes k) /\ n mod p = 0.
+Proof.
+  intros [n_gt n_lt]. pose (k - n) as d.
+  replace k with (d + n) by lia.
+  apply get_primes_div', n_gt.
+Qed.
+
+Theorem hd_in {X : Type} (x : X) (xs : list X)
+  : hd_error xs = Some x -> In x xs.
+Proof.
+  intro H. destruct xs as [| x1 xs1].
+  - simpl in H. discriminate H.
+  - simpl in H. inversion H as [eq]. simpl. left. reflexivity.
+Qed.
+
 Theorem get_primes_return_primes (k p : nat)
-  : In p (get_primes k) -> (p <= k /\ prime p).
+  : In p (get_primes k) <-> (p <= k /\ prime p).
 Proof.
   generalize dependent p.
-  induction k as [| k' IH]; intros p H.
-  - simpl in H. destruct H.
-  - unfold get_primes in H. simpl in H.
-Admitted.
+  induction k as [| k1 IH]; intro p.
+  - simpl. split; intro H; try contradiction.
+    destruct H as [H1 H2]. apply Nat.le_0_r in H1.
+    subst p. rewrite prime_is_prime in H2.
+    unfold is_prime in H2. simpl in H2. discriminate H2.
+  - split; intro H.
+    + apply in_get_primes_Sk in H as H'.
+      destruct H' as [H1 | [H1 H2]].
+      * apply IH in H1 as [H1 H2]. split; [| exact H2].
+        apply Nat.le_le_succ_r, H1.
+      * { split.
+          - rewrite <- H1. apply Nat.le_refl.
+          - subst p. unfold prime. split; [split|].
+            + apply Nat.neq_succ_0.
+            + intro Hc. rewrite Hc in H. apply H.
+            + intros [q [[q_gt q_lt] q_div]]. apply lt_n_Sm_le in q_lt.
+              pose (get_primes_div k1 q (conj q_gt q_lt)) as H3.
+              destruct H3 as [r [[r_gt r_lt] [r_in r_div]]].
+              apply H2 in r_in as r_ndiv.
+              rewrite Nat.mod_divide in *|-; try lia.
+              apply r_ndiv, (Nat.divide_trans r q (S k1)); assumption.
+        }
+    + destruct H as [p_lt p_prime].
+      apply le_lt_or_eq in p_lt. destruct p_lt as [p_lt | p_eq].
+      * apply lt_n_Sm_le in p_lt. apply get_primes_include_Sk.
+        apply ((proj2 (IH p)) (conj p_lt p_prime)).
+      * subst p. destruct k1 as [| k2] eqn:eq.
+        { subst k1. simpl. apply prime_is_prime in p_prime.
+          discriminate p_prime. }
+        assert (0 < (S k2)) as neq_k by lia.
+        apply get_primes_prime_head, p_prime.
+Qed.
 
 Theorem get_primes_return_all_primes (k p : nat)
   : p <= k  -> prime p -> In p (get_primes k).
 Proof.
-Admitted.
+  intros p_lt p_prime. apply get_primes_return_primes. auto.
+Qed.
