@@ -2694,3 +2694,13 @@ Theorem get_primes_return_all_primes (k p : nat)
 Proof.
   intros p_lt p_prime. apply get_primes_return_primes. auto.
 Qed.
+
+(* 6.4.4 The Type of Disjoint Sums *)
+Print sum.
+(* Inductive sum (A B : Type) : Type
+   := inl : A -> A + B
+    | inr : B -> A + B *)
+Check (sum nat bool).     (* (nat + bool)%type : Set *)
+Check (inl bool 4).     (* inl 4 : nat + bool *)
+Check (inr nat false). (* inr false : nat + bool *)
+
