@@ -54,3 +54,57 @@ Fixpoint invert (A : Type) (n : nat) (t : htree A n) {struct t} : htree A n
      | hnode _ p v t1 t2 => hnode A p v (invert A p t2) (invert A p t1)
      end.
 
+(* Exercise 6.46 **
+   Prove one of the injection lemmas for the hnode construct: *)
+Open Scope nat_scope.
+Definition htree_left (X : Type) (n : nat) (t : htree X (S n)) : htree X n
+  := match t with
+     | hnode _ n v t1 t2 => t1
+     end.
+
+Theorem injection_left_htree (n : nat) (t1 t2 t3 t4 : htree nat n)
+   : hnode nat n O t1 t2 = hnode nat n O t3 t4 ->  t1 = t3.
+Proof.
+  intro H. apply (f_equal (htree_left nat n)) in H. apply H.
+Qed.
+
+(* authors' solution *)
+Definition first_of_htree (A : Type) (n : nat)
+  : htree A n -> htree A (S n) -> htree A n.
+  intros v t. generalize v.
+  change (htree A (pred (S n)) -> htree A (pred (S n))).
+  case t.
+  - intros x v'. exact v'.
+  - intros p x t1 t2 v'. exact t1.
+Defined.
+
+Print first_of_htree.
+(* first_of_htree : forall (A : Type) (n : nat),
+                           htree A n -> htree A (S n) -> htree A n
+   = fun (A : Type) (n : nat) (v : htree A n) (t : htree A (S n))
+     => (match t in (htree _ n0)
+             return (htree A (pred n0) -> htree A (pred n0))
+         with
+         | hleaf _ _ => fun (v' : htree A (pred 0)) => v'
+         | hnode _ p _ t1 _ => fun _ : htree A (pred (S p)) => t1
+         end) v *)
+
+Check (first_of_htree nat 0 (hleaf nat 1)
+                      (hnode nat 0 2 (hleaf nat 3) (hleaf nat 4))).
+(* first_of_htree nat 0 (hleaf nat 1)
+       (hnode nat 0 2 (hleaf nat 3) (hleaf nat 4))
+   : htree nat 0 *)
+
+Compute (first_of_htree nat 0 (hleaf nat 1)
+                        (hnode nat 0 2 (hleaf nat 3) (hleaf nat 4))).
+(* = hleaf nat 3 : htree nat 0 *)
+
+Theorem injection_first_htree (n : nat) (t1 t2 t3 t4 : htree nat n)
+  : hnode nat n O t1 t2 = hnode nat n O t3 t4 -> t1 = t3.
+Proof.
+  intro H.
+  change
+    (first_of_htree nat n t1 (hnode nat n O t1 t2)
+     = first_of_htree nat n t1 (hnode nat n O t3 t4)).
+  now rewrite H.
+Qed.
