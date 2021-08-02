@@ -283,3 +283,19 @@ Compute flat_htree_bfs 3 (pn_tree 3).
 
 Example flat_htree_bfs_ex3 : flat_htree_bfs 3 (pn_tree 3) = range 0 15.
 Proof. reflexivity. Qed.
+
+Fixpoint In_htree {X : Type} {h : nat} (y : X) (t : htree X h) {struct t} : Prop
+  := match t with
+     | hleaf x => x = y
+     | hnode h x t1 t2 => x = y \/ In_htree y t1 \/ In_htree y t2
+     end.
+
+(* htree is pairwise different *)
+Fixpoint htree_is_pwdiff {X : Type} {h : nat} (t : htree X h) {struct t} : Prop
+  := match t with
+     | hleaf x => True
+     | hnode h' x t1 t2
+       => htree_is_pwdiff t1 /\ htree_is_pwdiff t2
+         /\ ~ In_htree x t1 /\ ~ In_htree x t2
+         /\ (forall y1 y2 : X, In_htree y1 t1 -> In_htree y2 t1 -> y1 <> y2)
+     end.
