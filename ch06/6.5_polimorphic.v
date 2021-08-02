@@ -25,12 +25,12 @@ Check sqrt_data_ind.
      -> forall s : sqrt_data n, P s *)
 
 (* 6.5.2 Variably Dependent Inductive Types *)
-Inductive htree (A : Type) : nat -> Type
-  := hleaf : A -> htree A 0
-   | hnode : forall n : nat, A -> htree A n -> htree A n -> htree A (S n).
+Inductive htree (X : Type) : nat -> Type
+  := hleaf : X -> htree X 0
+   | hnode : forall h : nat, X -> htree X h -> htree X h -> htree X (S h).
 
-Arguments hleaf {A}.
-Arguments hnode {A}.
+Arguments hleaf {X} x.
+Arguments hnode {X} h x t1 t2.
 
 Check htree_ind.
 (* htree_ind : forall (A : Type) (P : forall n : nat, htree A n -> Prop),
@@ -113,7 +113,7 @@ Proof.
   now rewrite H.
 Qed.
 
-(* Exercise 6.47
+(** Exercise 6.47
    Define a function that takes a number n and builds
    a fixedheight tree of height n containing
    pairwise different -integer- natural values
@@ -154,13 +154,13 @@ Example pn_tree_ex3
                    (hnode 0 6 (hleaf 13) (hleaf 14))).
 Proof. reflexivity. Qed.
 
-(* authors' solution (with Z replaced by [nat])*)
+(** authors' solution (with Z replaced by [nat])*)
 Fixpoint make_htree_aux (h start : nat) : nat * htree nat h
   := match h with
      | 0 => (start + 1, hleaf start)
-     | S h' => let p := make_htree_aux h' (start + 1) in
-              let q := make_htree_aux h' (fst p) in
-              (fst q, hnode h' start (snd p) (snd q))
+     | S h' => let (start2, t1) := make_htree_aux h' (start + 1) in
+              let (next, t2) := make_htree_aux h' start2 in
+              (next, hnode h' start t1 t2)
      end.
 
 Definition make_htree (n : nat) : htree nat n := snd (make_htree_aux n 0).
@@ -174,4 +174,112 @@ Example make_htree_ex3
             (hnode 1 8
                    (hnode 0 9 (hleaf 10) (hleaf 11))
                    (hnode 0 12 (hleaf 13) (hleaf 14))).
+Proof. reflexivity. Qed.
+
+(** my proof of some properties *)
+
+(* get range of natural numbers
+   from n0 (inclusive) to n (exclusive) *)
+Fixpoint range (n0 n : nat) : list nat
+  := match n with
+     | O => []
+     | S n' => n0 :: range (S n0) n'
+     end.
+
+Example range_ex1 : range 0 4 = [0; 1; 2; 3].
+Proof. reflexivity. Qed.
+
+(* list htree elements DFS *)
+Fixpoint flat_htree_dfs {X : Type} {h : nat} (t : htree X h)
+         {struct t} : list X
+  := match t with
+     | hleaf x => [x]
+     | hnode h' x t1 t2 => x :: (flat_htree_dfs t1) ++ (flat_htree_dfs t2)
+     end.
+
+Compute flat_htree_dfs (pn_tree 3).
+(* = [0; 1; 3; 7; 8; 4; 9; 10; 2; 5; 11; 12; 6; 13; 14] : list nat *)
+Compute flat_htree_dfs (make_htree 3).
+(* = [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14] : list nat *)
+Compute range 0 15.
+(* = [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14] : list nat *)
+
+Example flat_htree_dfs_ex3 : flat_htree_dfs (make_htree 3) = range 0 15.
+Proof. simpl. reflexivity. Qed.
+
+Definition htree_x {X : Type} (h : nat) (t : htree X h) : X
+  := match t with
+     | hleaf x => x
+     | hnode _ x _ _ => x
+     end.
+
+Definition htree_t1 {X : Type} (h : nat) (t : htree X (S h)) : htree X h
+  := match t with hnode _ _ t1 _ => t1 end.
+
+Definition htree_t2 {X : Type} (h : nat) (t : htree X (S h)) : htree X h
+  := match t with hnode _ _ _ t2 => t2 end.
+
+(** see "convoy pattern" in http://adam.chlipala.net/cpdt/html/MoreDep.html *)
+(** illustration on simple example: *)
+(*
+Definition convoy_test_err (n : nat) (t : htree Z n) : htree Z (pred n)
+  := match n with
+     | O => t
+     | S n' => htree_t1 n' t
+     end t.
+*)
+
+(* Toplevel input, characters 131-132: *)
+(* > Definition convoy_test_err (n : nat) (t : htree Z n) : htree Z (pred n)   := match n with      | O => t      | S n' => htree_t1 n' t      end t. *)
+(* >                                                                                                                                    ^ *)
+(* Error: *)
+(* In environment *)
+(* n : nat *)
+(* t : htree Z n *)
+(* n' : nat *)
+(* The term "t" has type "htree Z n" while it is expected to have type *)
+(*  "htree Z (S n')" (cannot unify "n" and "S n'"). *)
+
+Definition convoy_test_ok (n : nat) (t : htree Z n) : htree Z (pred n)
+  := match n return htree Z n -> htree Z (pred n) with
+     | O => fun t => t
+     | S n' => fun t => htree_t1 n' t
+     end t.
+
+(** list htree elements BFS *)
+Definition flat_htree_bfs_aux1 {X : Type}
+           (h : nat) (t : htree X (S h)) (acc : list (htree X h))
+  := (htree_t1 h t) :: (htree_t2 h t) :: acc.
+
+Fixpoint flat_htree_bfs_aux {X : Type} (h : nat)
+         (q : list (htree X h)) {struct h}
+  : list X
+  := match h return list (htree X h) -> list X with
+     | O => fun Q => map (htree_x 0) Q
+     | S h' => fun Q => let q' := fold_right (flat_htree_bfs_aux1 h') [] Q in
+                    let cur_layer := map (htree_x (S h')) Q in
+                    let next_layers := (flat_htree_bfs_aux h' q') in
+                    cur_layer ++ next_layers
+     end q.
+
+Print flat_htree_bfs_aux.
+
+Definition flat_htree_bfs {X : Type} (h : nat) (t : htree X h) : list X
+  := flat_htree_bfs_aux h [t].
+
+Compute flat_htree_bfs 1 (pn_tree 1).
+(* = [0; 1; 2] : list nat *)
+
+Compute pn_tree 2.
+(* = hnode 1 0 (hnode 0 1 (hleaf 3) (hleaf 4))
+               (hnode 0 2 (hleaf 5) (hleaf 6))
+   : htree nat 2 *)
+
+Compute flat_htree_bfs 2 (pn_tree 2).
+(* = [0; 1; 2; 3; 4; 5; 6] : list nat *)
+
+Compute flat_htree_bfs 3 (pn_tree 3).
+(* = [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14] : list nat *)
+
+Example flat_htree_bfs_ex3 : flat_htree_bfs 3 (pn_tree 3) = range 0 15.
 Proof. reflexivity. Qed.
