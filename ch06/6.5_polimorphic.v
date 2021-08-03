@@ -501,18 +501,36 @@ Qed.
 Theorem pn_tree_is_pwdiff (h : nat) : htree_is_pwdiff (pn_tree h).
 Proof. apply pn_tree_aux_is_pwdiff. Qed.
 
-Theorem make_htree_start_lt_next (h n : nat)
-  : n < fst (make_htree_aux h n).
+Theorem make_htree_aux_fst_eq (h n : nat)
+  : fst (make_htree_aux h n) = (n + 2^(S h) - 1).
 Proof.
   generalize dependent n.
   induction h as [| h1 IH]; [simpl; lia|].
-  intro n. simpl.
+  intro n. simpl make_htree_aux.
   destruct (make_htree_aux h1 (n + 1)) as (start2, t1) eqn:eq1.
   destruct (make_htree_aux h1 start2) as (next, t2) eqn:eq2.
-  simpl.
-  pose (IH (n + 1)) as H1. rewrite eq1 in H1. simpl in H1.
-  pose (IH start2) as H2. rewrite eq2 in H2. simpl in H2.
-  lia.
+  simpl fst.
+  apply (f_equal fst) in eq1 as eq_start2. simpl in eq_start2.
+  apply (f_equal fst) in eq2 as eq_next. simpl in eq_next.
+  rewrite IH in eq_next, eq_start2.
+  rewrite <- eq_next, <- eq_start2.
+  remember (S h1) as h eqn:eq_h. rewrite Nat.pow_succ_r'.
+  replace (n + 1 + 2^h - 1 + 2^h - 1) with (n + (2 * 2^h + 1) - 2) by lia.
+  rewrite <- Nat.add_sub_assoc.
+  replace (2 * 2 ^ h + 1 - 2) with (2 * 2 ^ h - 1); try lia.
+  - rewrite Nat.add_sub_assoc; [lia|].
+    rewrite <- Nat.pow_succ_r'. apply pow_ge_1. lia.
+  - apply le_plus_trans. rewrite Nat.mul_comm. apply pow_ge. lia.
+Qed.
+
+Theorem make_htree_start_lt_next (h n : nat)
+  : n < fst (make_htree_aux h n).
+Proof.
+  rewrite make_htree_aux_fst_eq.
+  rewrite <- Nat.add_sub_assoc.
+  - rewrite plus_n_O at 1. apply plus_le_lt_compat; [lia|].
+    pose (Nat.pow_gt_1 2 (S h)) as neq. lia.
+  - apply pow_ge_1. lia.
 Qed.
 
 Theorem make_htree_bounds (h n y : nat)
@@ -575,4 +593,45 @@ Qed.
 Theorem make_htree_is_pwdiff (h : nat) : htree_is_pwdiff (make_htree h).
 Proof. apply make_htree_aux_is_pwdiff. Qed.
 
+Theorem range_cons (n m : nat) : n :: range (S n) m = range n (S m).
+Proof. reflexivity. Qed.
+
+Theorem range_app (n1 n2 m1 m2 : nat)
+  : n2 = n1 + m1 -> range n1 m1 ++ range n2 m2 = range n1 (m1 + m2).
+Proof.
+  generalize dependent n2.
+  generalize dependent n1.
+  induction m1 as [| m1' IH]; intros n1 n2 eq.
+  - simpl. subst n2. rewrite Nat.add_0_r. reflexivity.
+  - simpl. rewrite (IH (S n1) n2); [reflexivity | lia].
+Qed.
+
+Theorem flat_make_htree_aux_is_range (h n : nat)
+  : flat_htree_dfs (snd (make_htree_aux h n)) = range n (2^(S h) - 1).
+Proof.
+  generalize dependent n.
+  induction h as [| h1 IH]; intro n; [reflexivity|].
+  simpl make_htree_aux. rewrite Nat.pow_succ_r'.
+  destruct (make_htree_aux h1 (n + 1)) as (start2, t1) eqn:eq1.
+  destruct (make_htree_aux h1 start2) as (next, t2) eqn:eq2.
+  apply (f_equal fst) in eq1 as eq_start2. simpl in eq_start2.
+  apply (f_equal fst) in eq2 as eq_next. simpl in eq_next.
+  apply (f_equal snd) in eq1 as eq_t1. simpl in eq_t1.
+  apply (f_equal snd) in eq2 as eq_t2. simpl in eq_t2.
+  simpl. rewrite <- eq_t1, <- eq_t2. rewrite !IH.
+  replace (2^h1 + (2^h1 + 0)) with (2 * 2^h1) by lia.
+  rewrite Nat.add_1_r. rewrite range_app, range_cons.
+  - apply (f_equal (range n)). rewrite <- Nat.add_1_r.
+    replace (2^(S h1)) with (2 * 2^h1) by auto with arith.
+    replace (2 * 2^h1 + (2 * 2^h1 + 0)) with (4 * 2^h1) by lia.
+    replace (2 * 2^h1 - 1 + (2 * 2^h1 - 1)) with (4 * 2^h1 - 2) by lia.
+    rewrite <- Nat.add_sub_swap. lia.
+    rewrite Nat.mul_comm. apply pow_ge. lia.
+  - rewrite <- eq_start2, make_htree_aux_fst_eq.
+    rewrite Nat.add_sub_assoc; [| apply pow_ge_1]; lia.
+Qed.
+
+Theorem flat_make_htree_is_range (h : nat)
+  : flat_htree_dfs (make_htree h) = range 0 (2^(S h) - 1).
+Proof. apply flat_make_htree_aux_is_range. Qed.
 
