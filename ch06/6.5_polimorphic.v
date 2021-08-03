@@ -500,3 +500,79 @@ Qed.
 
 Theorem pn_tree_is_pwdiff (h : nat) : htree_is_pwdiff (pn_tree h).
 Proof. apply pn_tree_aux_is_pwdiff. Qed.
+
+Theorem make_htree_start_lt_next (h n : nat)
+  : n < fst (make_htree_aux h n).
+Proof.
+  generalize dependent n.
+  induction h as [| h1 IH]; [simpl; lia|].
+  intro n. simpl.
+  destruct (make_htree_aux h1 (n + 1)) as (start2, t1) eqn:eq1.
+  destruct (make_htree_aux h1 start2) as (next, t2) eqn:eq2.
+  simpl.
+  pose (IH (n + 1)) as H1. rewrite eq1 in H1. simpl in H1.
+  pose (IH start2) as H2. rewrite eq2 in H2. simpl in H2.
+  lia.
+Qed.
+
+Theorem make_htree_bounds (h n y : nat)
+  : In_htree y (snd (make_htree_aux h n))
+    <-> n <= y < fst (make_htree_aux h n).
+Proof.
+  generalize dependent n.
+  generalize dependent y.
+  induction h as [| h1 IH]; [simpl; lia|]. simpl. intros y n.
+  destruct (make_htree_aux h1 (n + 1)) as (start2, t1) eqn:eq1.
+  destruct (make_htree_aux h1 start2) as (next, t2) eqn:eq2.
+  apply (f_equal fst) in eq1 as eq_start2. simpl in eq_start2.
+  apply (f_equal fst) in eq2 as eq_next. simpl in eq_next.
+  apply (f_equal snd) in eq1 as eq_t1. simpl in eq_t1.
+  apply (f_equal snd) in eq2 as eq_t2. simpl in eq_t2.
+  simpl. split; intro H.
+  - assert (n + 1 < start2) as neq1.
+    { subst start2. apply make_htree_start_lt_next. }
+    assert (start2 < next) as neq2.
+    { subst next. apply make_htree_start_lt_next. }
+    destruct H as [H | [H | H]].
+    + subst n. split; lia.
+    + rewrite <- eq_t1 in H. apply IH in H. rewrite eq_start2 in H. lia.
+    + rewrite <- eq_t2 in H. apply IH in H. rewrite eq_next in H. lia.
+  - destruct H as [y_ge_n y_lt_next].
+    apply le_lt_or_eq in y_ge_n. destruct y_ge_n as [y_gt_n | y_eq_n].
+    2:{ subst n. now left. }
+    right.
+    destruct (le_lt_dec start2 y) as [y_gt_s2 | y_lt_s2].
+    + right. rewrite <- eq_t2. apply IH. lia.
+    + left. rewrite <- eq_t1. apply IH. lia.
+Qed.
+
+Theorem make_htree_aux_is_pwdiff (h n : nat)
+  : htree_is_pwdiff (snd (make_htree_aux h n)).
+Proof.
+  generalize dependent n.
+  induction h as [| h1 IH]; intro n; [reflexivity|].
+  simpl.
+  destruct (make_htree_aux h1 (n + 1)) as (start2, t1) eqn:eq1.
+  destruct (make_htree_aux h1 start2) as (next, t2) eqn:eq2.
+  apply (f_equal fst) in eq1 as eq_start2. simpl in eq_start2.
+  apply (f_equal fst) in eq2 as eq_next. simpl in eq_next.
+  apply (f_equal snd) in eq1 as eq_t1. simpl in eq_t1.
+  apply (f_equal snd) in eq2 as eq_t2. simpl in eq_t2.
+  simpl. repeat split.
+  - rewrite <- eq_t1. apply (IH (n + 1)).
+  - rewrite <- eq_t2. apply (IH start2).
+  - intros y H eq. subst y. rewrite <- eq_t1 in H.
+    apply make_htree_bounds in H. lia.
+  - intros y H eq. subst y. rewrite <- eq_t2 in H.
+    apply make_htree_bounds in H.
+    pose (make_htree_start_lt_next h1 (n + 1)) as neq. lia.
+  - intros y1 y2 H1 H2 eq.
+    rewrite <- eq_t1 in H1. rewrite <- eq_t2 in H2.
+    apply make_htree_bounds in H1, H2.
+    rewrite eq_start2 in H1. rewrite eq_next in H2. lia.
+Qed.
+
+Theorem make_htree_is_pwdiff (h : nat) : htree_is_pwdiff (make_htree h).
+Proof. apply make_htree_aux_is_pwdiff. Qed.
+
+
