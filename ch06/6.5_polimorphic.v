@@ -207,16 +207,16 @@ Compute range 0 15.
 Example flat_htree_dfs_ex3 : flat_htree_dfs (make_htree 3) = range 0 15.
 Proof. simpl. reflexivity. Qed.
 
-Definition htree_x {X : Type} (h : nat) (t : htree X h) : X
+Definition htree_x {X : Type} {h : nat} (t : htree X h) : X
   := match t with
      | hleaf x => x
      | hnode _ x _ _ => x
      end.
 
-Definition htree_t1 {X : Type} (h : nat) (t : htree X (S h)) : htree X h
+Definition htree_t1 {X : Type} {h : nat} (t : htree X (S h)) : htree X h
   := match t with hnode _ _ t1 _ => t1 end.
 
-Definition htree_t2 {X : Type} (h : nat) (t : htree X (S h)) : htree X h
+Definition htree_t2 {X : Type} {h : nat} (t : htree X (S h)) : htree X h
   := match t with hnode _ _ _ t2 => t2 end.
 
 (** see "convoy pattern" in http://adam.chlipala.net/cpdt/html/MoreDep.html *)
@@ -243,31 +243,31 @@ Definition convoy_test_err (n : nat) (t : htree Z n) : htree Z (pred n)
 Definition convoy_test_ok (n : nat) (t : htree Z n) : htree Z (pred n)
   := match n return htree Z n -> htree Z (pred n) with
      | O => fun t => t
-     | S n' => fun t => htree_t1 n' t
+     | S n' => fun t => htree_t1 t
      end t.
 
 (** list htree elements BFS *)
 Definition flat_htree_bfs_aux1 {X : Type}
            (h : nat) (t : htree X (S h)) (acc : list (htree X h))
-  := (htree_t1 h t) :: (htree_t2 h t) :: acc.
+  := (htree_t1 t) :: (htree_t2 t) :: acc.
 
-Fixpoint flat_htree_bfs_aux {X : Type} (h : nat)
+Fixpoint flat_htree_bfs_aux {X : Type} {h : nat}
          (q : list (htree X h)) {struct h}
   : list X
   := match h return list (htree X h) -> list X with
-     | O => fun Q => map (htree_x 0) Q
+     | O => fun Q => map htree_x Q
      | S h' => fun Q => let q' := fold_right (flat_htree_bfs_aux1 h') [] Q in
-                    let cur_layer := map (htree_x (S h')) Q in
-                    let next_layers := (flat_htree_bfs_aux h' q') in
+                    let cur_layer := map htree_x Q in
+                    let next_layers := (flat_htree_bfs_aux q') in
                     cur_layer ++ next_layers
      end q.
 
 Print flat_htree_bfs_aux.
 
-Definition flat_htree_bfs {X : Type} (h : nat) (t : htree X h) : list X
-  := flat_htree_bfs_aux h [t].
+Definition flat_htree_bfs {X : Type} {h : nat} (t : htree X h) : list X
+  := @flat_htree_bfs_aux X h [t].
 
-Compute flat_htree_bfs 1 (pn_tree 1).
+Compute flat_htree_bfs (pn_tree 1).
 (* = [0; 1; 2] : list nat *)
 
 Compute pn_tree 2.
@@ -275,13 +275,13 @@ Compute pn_tree 2.
                (hnode 0 2 (hleaf 5) (hleaf 6))
    : htree nat 2 *)
 
-Compute flat_htree_bfs 2 (pn_tree 2).
+Compute flat_htree_bfs (pn_tree 2).
 (* = [0; 1; 2; 3; 4; 5; 6] : list nat *)
 
-Compute flat_htree_bfs 3 (pn_tree 3).
+Compute flat_htree_bfs (pn_tree 3).
 (* = [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14] : list nat *)
 
-Example flat_htree_bfs_ex3 : flat_htree_bfs 3 (pn_tree 3) = range 0 15.
+Example flat_htree_bfs_ex3 : flat_htree_bfs (pn_tree 3) = range 0 15.
 Proof. reflexivity. Qed.
 
 Fixpoint In_htree {X : Type} {h : nat} (y : X) (t : htree X h) {struct t} : Prop
@@ -606,6 +606,9 @@ Proof.
   - simpl. rewrite (IH (S n1) n2); [reflexivity | lia].
 Qed.
 
+Theorem fold_double (n : nat) : n + (n + 0) = 2 * n.
+Proof. reflexivity. Qed.
+
 Theorem flat_make_htree_aux_is_range (h n : nat)
   : flat_htree_dfs (snd (make_htree_aux h n)) = range n (2^(S h) - 1).
 Proof.
@@ -619,8 +622,7 @@ Proof.
   apply (f_equal snd) in eq1 as eq_t1. simpl in eq_t1.
   apply (f_equal snd) in eq2 as eq_t2. simpl in eq_t2.
   simpl. rewrite <- eq_t1, <- eq_t2. rewrite !IH.
-  replace (2^h1 + (2^h1 + 0)) with (2 * 2^h1) by lia.
-  rewrite Nat.add_1_r. rewrite range_app, range_cons.
+  rewrite fold_double, Nat.add_1_r, range_app, range_cons.
   - apply (f_equal (range n)). rewrite <- Nat.add_1_r.
     replace (2^(S h1)) with (2 * 2^h1) by auto with arith.
     replace (2 * 2^h1 + (2 * 2^h1 + 0)) with (4 * 2^h1) by lia.
@@ -635,3 +637,129 @@ Theorem flat_make_htree_is_range (h : nat)
   : flat_htree_dfs (make_htree h) = range 0 (2^(S h) - 1).
 Proof. apply flat_make_htree_aux_is_range. Qed.
 
+Theorem cons_eq {X : Type} (x1 x2 : X) (xs1 xs2 : list X)
+  : x1 = x2 -> xs1 = xs2 -> x1 :: xs1 = x2 :: xs2.
+Proof. intros eq_x eq_xs. subst x2 xs2. reflexivity. Qed.
+
+Theorem flat_htree_bfs_aux_Sh {X : Type} (h : nat)
+        (ts : list (htree X (S h)))
+  : flat_htree_bfs_aux ts
+    = (map htree_x ts)
+        ++ flat_htree_bfs_aux (fold_right (flat_htree_bfs_aux1 h) [] ts).
+Proof. reflexivity. Qed.
+
+Theorem flat_htree_bfs_aux_Sh_cons {X : Type} (h : nat)
+        (t : htree X (S h)) (ts : list (htree X (S h)))
+  : flat_htree_bfs_aux (t :: ts)
+    = (htree_x t)
+        :: (map htree_x ts)
+        ++ (flat_htree_bfs_aux
+              ((htree_t1 t)
+                 :: (htree_t2 t)
+                 :: (fold_right (flat_htree_bfs_aux1 h) [] ts))).
+Proof. reflexivity. Qed.
+
+Theorem flat_htree_bfs_aux0 {X : Type} (ts : list (htree X 0))
+  : flat_htree_bfs_aux ts = map htree_x ts.
+Proof. reflexivity. Qed.
+
+Theorem pn_trees_range_x (h n0 m : nat)
+  : map htree_x (map (pn_tree_aux h) (range n0 m))
+    = range n0 m.
+Proof.
+  generalize dependent n0.
+  induction m as [| m' IH]; [reflexivity|].
+  intro n0. simpl. rewrite IH.
+  destruct h as [| h']; reflexivity.
+Qed.
+
+Theorem pn_trees_range_second_layer (n0 m : nat)
+  : map htree_x
+        (fold_right (flat_htree_bfs_aux1 0) []
+                    (map (pn_tree_aux 1) (range n0 m)))
+    = range (2 * n0 + 1) (2 * m).
+Proof.
+  generalize dependent n0.
+  induction m as [| m1 IH]; intro n0; [reflexivity|].
+  simpl. rewrite IH. simpl. apply cons_eq; [reflexivity|].
+  replace (m1 + S (m1 + 0)) with (S (2 * m1)) by lia. simpl.
+  apply cons_eq; [lia|]. f_equal. lia.
+Qed.
+
+Theorem flat_htree_bfs_aux_nil (X : Type) (h : nat)
+  : @flat_htree_bfs_aux X h [] = [].
+Proof.
+  induction h as [| h' IH]; [reflexivity|].
+  simpl. exact IH.
+Qed.
+
+Theorem pn_trees_range_next_layers (h n0 m : nat)
+  : fold_right (flat_htree_bfs_aux1 h) []
+               (map (pn_tree_aux (S h)) (range n0 m))
+    = map (pn_tree_aux h) (range (2 * n0 + 1) (2 * m)).
+Proof.
+  generalize dependent n0.
+  induction m as [| m' IH]; intro n0; [reflexivity|].
+  simpl in *. rewrite IH. unfold flat_htree_bfs_aux1. simpl.
+  apply cons_eq; [reflexivity|]. rewrite (Nat.add_succ_r m').
+  simpl. apply cons_eq.
+  - f_equal. lia.
+  - f_equal. f_equal. lia.
+Qed.
+
+Theorem flat_htree_bfs_aux_pn_tree_Sh_head (h n0 m : nat)
+  : flat_htree_bfs_aux (map (pn_tree_aux (S h)) (range n0 m))
+    = (range n0 m)
+        ++ (flat_htree_bfs_aux (map (pn_tree_aux h)
+                                    (range (2 * n0 + 1) (2 * m)))).
+Proof.
+  rewrite flat_htree_bfs_aux_Sh, pn_trees_range_x. apply app_inv_head_iff.
+  rewrite pn_trees_range_next_layers. reflexivity.
+Qed.
+
+Theorem flat_htree_bfs_aux_pn_tree_Sh_last (h n0 m : nat)
+  : flat_htree_bfs_aux (map (pn_tree_aux (S h)) (range n0 m))
+    = (flat_htree_bfs_aux
+         (map (pn_tree_aux h) (range n0 m)))
+        ++ range (2^(S h) * (n0 + 1) - 1) (m * 2^(S h)).
+Proof.
+  generalize dependent n0.
+  generalize dependent m.
+  induction h as [| h1 IH]; intros m n0.
+  - rewrite flat_htree_bfs_aux_Sh, !flat_htree_bfs_aux0, !pn_trees_range_x.
+    apply app_inv_head_iff. rewrite pn_trees_range_second_layer.
+    f_equal; simpl; lia.
+  - rewrite flat_htree_bfs_aux_pn_tree_Sh_head, IH.
+    rewrite flat_htree_bfs_aux_pn_tree_Sh_head.
+    rewrite <- app_assoc. repeat apply app_inv_head_iff.
+    f_equal; simpl; try lia.
+Qed.
+
+Compute (flat_htree_bfs (pn_tree_aux 1 1)).
+(* = [1; 3; 4] : list nat *)
+Compute range (2^2 * (1 + 1) - 1) (2^2).
+(* = [7; 8; 9; 10] : list nat *)
+Compute (flat_htree_bfs (pn_tree_aux 2 1)).
+(* = [1; 3; 4; 7; 8; 9; 10] : list nat *)
+
+Theorem flat_pn_tree_Sh (h n : nat)
+  : flat_htree_bfs (pn_tree_aux (S h) n)
+    = (flat_htree_bfs (pn_tree_aux h n))
+        ++ range (2^(S h) * (n + 1) - 1) (2^(S h)).
+Proof.
+  unfold flat_htree_bfs.
+  pose (flat_htree_bfs_aux_pn_tree_Sh_last h n 1) as H.
+  simpl in *. rewrite H. rewrite !fold_double.
+  apply app_inv_head_iff. f_equal. lia.
+Qed.
+
+Theorem flat_pn_tree_is_range (h : nat)
+  : flat_htree_bfs (pn_tree h) = range 0 (2^(S h) - 1).
+Proof.
+  unfold pn_tree. induction h as [| h' IH].
+  { unfold flat_htree_bfs. reflexivity. }
+  rewrite flat_pn_tree_Sh, IH. rewrite range_app; [|lia].
+  remember (S h') as h eqn:eq_h. rewrite Nat.pow_succ_r'.
+  rewrite <- Nat.add_sub_swap; [|apply pow_ge_1; lia].
+  replace (2^h + 2^h) with (2 * 2^h) by lia. reflexivity.
+Qed.
