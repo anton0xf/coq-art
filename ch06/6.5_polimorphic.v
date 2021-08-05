@@ -391,12 +391,7 @@ Proof.
 Qed.
 
 Theorem pow_ge_1 (n m : nat) : 1 <= n -> 1 <= n ^ m.
-Proof.
-  intro H. induction m as [| m' IH].
-  - simpl. apply Nat.le_refl.
-  - simpl. rewrite <- (Nat.mul_1_l 1).
-    apply Nat.mul_le_mono; lia.
-Qed.
+Proof. intro H. induction m as [| m' IH]; simpl; lia. Qed.
 
 Lemma le_sub (a b c : nat) : b <= a -> c <= a -> a - b <= a - c -> c <= b.
 Proof.
@@ -420,6 +415,13 @@ Proof.
   rewrite Nat.add_sub in H. exact H.
 Qed.
 
+Theorem pow_ge (a b c : nat) : 0 < a <= c -> a <= a ^ b * c.
+Proof.
+  intros [a_gt a_lt]. rewrite <- (Nat.mul_1_l a) at 1.
+  apply Nat.mul_le_mono; [|lia].
+  apply pow_ge_1. lia.
+Qed.
+
 Theorem pn_tree_last_layer (h n y : nat)
   : (2^h * (n + 1) - 1) <= y <= 2^h * (n + 2) - 2
     -> In_htree y (pn_tree_aux h n).
@@ -436,18 +438,9 @@ Proof.
     + apply Nat.leb_gt in neq. unfold lt in neq.
       rewrite <- Nat.add_1_r in neq.
       rewrite <- Nat.add_sub_swap in neq.
-      2:{ rewrite <- (Nat.mul_1_l 2) at 1.
-          apply Nat.mul_le_mono; [|lia].
-          apply pow_ge_1. lia. }
+      2:{ apply pow_ge. lia. }
       apply pn_tree_contains_right_branch, H2.
       simpl in y_lt. split; lia.
-Qed.
-
-Theorem pow_ge (a b c : nat) : 0 < a <= c -> a <= a ^ b * c.
-Proof.
-  intros [a_gt a_lt]. rewrite <- (Nat.mul_1_l a) at 1.
-  apply Nat.mul_le_mono; [|lia].
-  apply pow_ge_1. lia.
 Qed.
 
 Theorem pn_tree_branches_is_diff (h n y : nat)
@@ -624,6 +617,7 @@ Proof.
   simpl. rewrite <- eq_t1, <- eq_t2. rewrite !IH.
   rewrite fold_double, Nat.add_1_r, range_app, range_cons.
   - apply (f_equal (range n)). rewrite <- Nat.add_1_r.
+    rewrite fold_double.
     replace (2^(S h1)) with (2 * 2^h1) by auto with arith.
     replace (2 * 2^h1 + (2 * 2^h1 + 0)) with (4 * 2^h1) by lia.
     replace (2 * 2^h1 - 1 + (2 * 2^h1 - 1)) with (4 * 2^h1 - 2) by lia.
@@ -760,6 +754,6 @@ Proof.
   { unfold flat_htree_bfs. reflexivity. }
   rewrite flat_pn_tree_Sh, IH. rewrite range_app; [|lia].
   remember (S h') as h eqn:eq_h. rewrite Nat.pow_succ_r'.
-  rewrite <- Nat.add_sub_swap; [|apply pow_ge_1; lia].
-  replace (2^h + 2^h) with (2 * 2^h) by lia. reflexivity.
+  f_equal. lia.
 Qed.
+
