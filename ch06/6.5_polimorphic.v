@@ -757,3 +757,33 @@ Proof.
   f_equal. lia.
 Qed.
 
+(* Exercise 6.48 * Define inductively the type [binary_word]
+   used in section 4.1.1.2 and define recursively
+   the function [binary_word_concat]. *)
+Inductive binary_word : nat -> Set
+  := BW_empty : binary_word 0
+   | BW_cons : forall n : nat, bool -> binary_word n -> binary_word (S n).
+
+Arguments BW_cons {n} _ _.
+
+Fixpoint binary_word_concat {n1 n2 : nat}
+         (w1 : binary_word n1) (w2 : binary_word n2)
+  : binary_word (n1 + n2)
+  := match w1 in binary_word n return binary_word (n + n2) with
+     | BW_empty => w2
+     | BW_cons b w1' => BW_cons b (binary_word_concat w1' w2)
+     end.
+
+Fixpoint bin_list_to_word (bs : list bool) : binary_word (length bs)
+  := match bs as x return binary_word (length x) with
+     | nil => BW_empty
+     | cons b bs' => BW_cons b (bin_list_to_word bs')
+     end.
+
+Example binary_word_concat_ex
+  : (binary_word_concat (bin_list_to_word [true; false; true])
+                        (bin_list_to_word [false; false]))
+    = (bin_list_to_word [true; false; true; false; false]).
+Proof. reflexivity. Qed.
+
+
