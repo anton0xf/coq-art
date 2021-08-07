@@ -246,6 +246,14 @@ Definition convoy_test_ok (n : nat) (t : htree Z n) : htree Z (pred n)
      | S n' => fun t => htree_t1 t
      end t.
 
+(* It is bad example because "convoy" and even match "in" clause
+   is not nececarry *)
+Definition convoy_test_no_convoy (n : nat) (t : htree Z n) : htree Z (pred n)
+  := match t with
+     | hleaf x => hleaf x
+     | hnode h x t1 t2 => t1
+     end.
+
 (** list htree elements BFS *)
 Definition flat_htree_bfs_aux1 {X : Type}
            (h : nat) (t : htree X (S h)) (acc : list (htree X h))
@@ -786,4 +794,46 @@ Example binary_word_concat_ex
     = (bin_list_to_word [true; false; true; false; false]).
 Proof. reflexivity. Qed.
 
+(* Exercise 6.49 ** Define the function [binary_word_or]
+   that computes the bit-wise "or" operation of two words
+   of the same length (like the "|" operator in the C language). *)
 
+Definition convert_bw_len (n1 n2 : nat) (H : S n2 = S n1)
+           (xs : binary_word n1) : binary_word n2.
+apply eq_add_S in H. rewrite H. exact xs.
+Defined.
+
+Print convert_bw_len.
+(* convert_bw_len =
+   fun (n1 n2 : nat) (H : S n2 = S n1) (xs : binary_word n1)
+   => let H0 : n2 = n1 := eq_add_S n2 n1 H
+      in eq_rec_r (fun n3 : nat => binary_word n3) xs H0
+   : forall n1 n2 : nat, S n2 = S n1 -> binary_word n1 -> binary_word n2
+ *)
+
+Fixpoint binary_word_or (n : nat) (xs ys : binary_word n) : binary_word n
+  := match xs in binary_word m1 return binary_word m1 -> binary_word m1 with
+     | BW_empty => fun _ => BW_empty
+     | @BW_cons n1 x xs'
+       => fun ys : binary_word (S n1)
+         => match ys in binary_word m2 return m2 = S n1 -> binary_word m2 with
+           | BW_empty => fun _ => BW_empty
+           | @BW_cons n2 y ys'
+             => fun H => BW_cons (x || y)
+                             (binary_word_or
+                                n2 (convert_bw_len n1 n2 H xs') ys')
+           end (eq_refl (S n1))
+     end ys.
+
+Theorem binary_word_or_idempotent (n : nat) (xs : binary_word n)
+  : binary_word_or n xs xs = xs.
+Proof.
+  induction xs as [| n' b xs' IH]; [reflexivity|].
+  simpl. unfold convert_bw_len. simpl.
+  replace (b || b) with b.
+  2:{ destruct b; reflexivity. }
+  f_equal.
+  replace (eq_rec_r (fun n2 : nat => binary_word n2) xs' eq_refl) with xs'.
+  2:{ unfold eq_rec_r. reflexivity. }
+  apply IH.
+Qed.
