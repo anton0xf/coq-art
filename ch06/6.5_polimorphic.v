@@ -977,3 +977,33 @@ Proof. reflexivity. Qed.
 
 Example vtl_ex : vtl (vcons 42 1 (vcons 22 0 vnil)) = vcons 22 0 vnil.
 Proof. reflexivity. Qed.
+
+(* Exercise 6.50 ** Define a function with a dependent type
+   that returns [true] for natural numbers of the form [4*n + 1],
+   [false] for numbers of the form [4*n + 3],
+   and [n] for numbers of the form [2*n]. *)
+
+Fixpoint dep_fn_type (n : nat) : Set
+  := match n with
+     | 0 => nat
+     | 1 => bool
+     | (S (S n')) => dep_fn_type n'
+     end.
+
+Fixpoint dep_fn (n : nat) : dep_fn_type n
+  := match n with
+     | 0 => 0
+     | 1 => true
+     | 2 => 1
+     | 3 => false
+     | S (S (S (S n'))) => dep_fn n'
+     end.
+
+Example dep_fn_ex6 : dep_fn 6 = 1.
+Proof. reflexivity. Qed.
+
+Example dep_fn_ex7 : dep_fn 7 = false.
+Proof. reflexivity. Qed.
+
+Example dep_fn_ex9 : dep_fn 9 = true.
+Proof. reflexivity. Qed.
