@@ -908,3 +908,72 @@ Proof.
   now rewrite bword_to_binary_word_inv.
 Qed.
 
+(* See also Consider the following definition,
+   very similar to Standard Library's definition: *)
+Section Vector_definitions.
+
+  Variable X : Type.
+
+  Inductive vector : nat -> Type
+    := vnil : vector 0
+     | vcons (x : X) (n : nat) (v : vector n) : vector (S n).
+
+  (* Define the functions that return respectively
+     the head and the tail of a non-empty vector,
+     as direct applications of the recursor vector_rect> *)
+
+  Definition vhd {n : nat} (v : vector (S n)) : X
+    := match v in vector m
+             return (match m with O => unit | S _ => X end)
+       with
+       | vnil => tt
+       | vcons x n' v' => x
+       end.
+
+  Definition vtl {n : nat} (v : vector (S n)) : vector n
+    := match v in vector m
+             return (match m with O => unit | S m' => vector m' end)
+       with
+       | vnil => tt
+       | vcons x n' v' => v'
+       end.
+
+  Definition v_Id (n : nat) : vector n -> vector n
+    := match n with
+       | 0 => fun v => vnil
+       | S p => fun v => vcons (vhd v) p (vtl v)
+       end.
+
+  Compute fun v : vector 0 => v_Id 0 v.
+  (*   = fun _ : vector 0 => vnil : vector 0 -> vector 0 *)
+
+  Lemma v_Id_eq (n : nat) (v : vector n) : v = v_Id n v.
+  Proof using.
+    pattern n, v. apply vector_rect.
+    - reflexivity.
+    - intros. reflexivity.
+  Qed.
+
+  Lemma vector0 (v : vector 0) : v = vnil.
+  Proof using.
+    change vnil with (v_Id 0 v).
+    apply v_Id_eq.
+  Qed.
+
+  Lemma vector_S (n : nat) (v : vector (S n)) : v = vcons (vhd v) n (vtl v).
+  Proof using.
+    change (vcons (vhd v) n (vtl v)) with (v_Id (S n) v).
+    apply v_Id_eq.
+  Qed.
+End Vector_definitions.
+
+Arguments vnil {X}.
+Arguments vcons {X}.
+Arguments vhd {X} {n}.
+Arguments vtl {X} {n}.
+
+Example vhd_ex : vhd (vcons 42 0 vnil) = 42.
+Proof. reflexivity. Qed.
+
+Example vtl_ex : vtl (vcons 42 1 (vcons 22 0 vnil)) = vcons 22 0 vnil.
+Proof. reflexivity. Qed.
