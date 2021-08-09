@@ -811,7 +811,7 @@ Print convert_bw_len.
    : forall n1 n2 : nat, S n2 = S n1 -> binary_word n1 -> binary_word n2
  *)
 
-Fixpoint binary_word_or (n : nat) (xs ys : binary_word n) : binary_word n
+Fixpoint binary_word_or {n : nat} (xs ys : binary_word n) : binary_word n
   := match xs in binary_word m1 return binary_word m1 -> binary_word m1 with
      | BW_empty => fun _ => BW_empty
      | @BW_cons n1 x xs'
@@ -821,12 +821,12 @@ Fixpoint binary_word_or (n : nat) (xs ys : binary_word n) : binary_word n
            | @BW_cons n2 y ys'
              => fun H => BW_cons (x || y)
                              (binary_word_or
-                                n2 (convert_bw_len n1 n2 H xs') ys')
+                                (convert_bw_len n1 n2 H xs') ys')
            end (eq_refl (S n1))
      end ys.
 
 Theorem binary_word_or_idempotent (n : nat) (xs : binary_word n)
-  : binary_word_or n xs xs = xs.
+  : binary_word_or xs xs = xs.
 Proof.
   induction xs as [| n' b xs' IH]; [reflexivity|].
   simpl. unfold convert_bw_len. simpl.
@@ -837,3 +837,74 @@ Proof.
   2:{ unfold eq_rec_r. reflexivity. }
   apply IH.
 Qed.
+
+(* Do the same exercises (last two), but considering vectors *)
+Require Import Vector.
+Definition bword := t bool.
+Definition bw_concat := @append bool.
+
+Fixpoint binary_word_to_bword {n : nat} (w : binary_word n)
+         {struct w} : bword n
+  := match w with
+     | BW_empty => nil bool
+     | @BW_cons n' b w' => cons bool b n' (binary_word_to_bword w')
+     end.
+
+Fixpoint bword_to_binary_word {n : nat} (w : bword n)
+         {struct w} : binary_word n
+  := match w with
+     | nil _ => BW_empty
+     | cons _ b n' w' => @BW_cons n' b (bword_to_binary_word w')
+     end.
+
+Theorem binary_word_to_bword_inv (n : nat) (w : binary_word n)
+  : bword_to_binary_word (binary_word_to_bword w) = w.
+Proof.
+  induction w as [| n' b w' IH]; [reflexivity|].
+  simpl. rewrite IH. reflexivity.
+Qed.
+
+Theorem bword_to_binary_word_inv (n : nat) (w : bword n)
+  : binary_word_to_bword (bword_to_binary_word w) = w.
+Proof.
+  induction w as [| b n' w' IH]; [reflexivity|].
+  simpl. rewrite IH. reflexivity.
+Qed.
+
+Theorem bw_concat_correct (n1 n2 : nat) (w1 : bword n1) (w2 : bword n2)
+  : bw_concat n1 n2 w1 w2
+    = binary_word_to_bword
+        (binary_word_concat (bword_to_binary_word w1)
+                            (bword_to_binary_word w2)).
+Proof.
+  induction w1 as [| b n1' w1' IH].
+  - simpl. rewrite bword_to_binary_word_inv. now unfold bw_concat.
+  - simpl. rewrite <- IH. unfold bw_concat. reflexivity.
+Qed.
+
+Definition bw_or {n : nat} (w1 w2 : bword n) : bword n
+  := map2 orb w1 w2.
+
+Theorem bw_or_correct {n : nat} (w1 w2 : bword n)
+  : bw_or w1 w2
+    = binary_word_to_bword
+        (binary_word_or (bword_to_binary_word w1)
+                        (bword_to_binary_word w2)).
+Proof.
+  unfold bword in *.
+  generalize dependent w2.
+  generalize dependent w1.
+  generalize dependent n.
+  apply rect2; [reflexivity|].
+  intros n' w1' w2' IH x1 x2. simpl.
+  unfold convert_bw_len. simpl.
+  unfold eq_rec_r. simpl.
+  rewrite <- IH. reflexivity.
+Qed.
+
+Theorem bw_or_idempotent (n : nat) (xs : bword n) : bw_or xs xs = xs.
+Proof.
+  rewrite bw_or_correct, binary_word_or_idempotent.
+  now rewrite bword_to_binary_word_inv.
+Qed.
+
